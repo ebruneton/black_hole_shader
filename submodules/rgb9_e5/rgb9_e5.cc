@@ -9,9 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define __LITTLE_ENDIAN  1
-#define __BIG_ENDIAN     2
-
 #ifdef _WIN32
 #define __BYTE_ORDER __LITTLE_ENDIAN
 #endif
@@ -123,7 +120,7 @@ rgb9e5 float3_to_rgb9e5(const float rgb[3])
 {
   rgb9e5 retval;
   float maxrgb;
-  int rm, gm, bm;
+  int maxm, rm, gm, bm;
   float rc, gc, bc;
   int exp_shared;
   double denom;
@@ -175,5 +172,13 @@ void rgb9e5_to_float3(rgb9e5 v, float retval[3])
   retval[0] = v.field.r * scale;
   retval[1] = v.field.g * scale;
   retval[2] = v.field.b * scale;
+}
+
+unsigned int to_rgb9e5(const double r, const double g, const double b) {
+  float rgb[3];
+  rgb[0] = r;
+  rgb[1] = g;
+  rgb[2] = b;
+  return float3_to_rgb9e5(rgb).raw;
 }
 
