@@ -1,0 +1,15 @@
+[submodule "submodules/gzip"]
+	path = submodules/gzip
+	url = https://github.com/mapbox/gzip-hpp
+[submodule "submodules/dimensional_types"]
+	path = submodules/dimensional_types
+	url = https://github.com/ebruneton/dimensional_types
+[submodule "submodules/png++"]
+	path = submodules/png++
+	url = https://github.com/usagi/pngpp
+[submodule "submodules/csv"]
+	path = submodules/csv
+	url = https://github.com/ben-strasser/fast-cpp-csv-parser
+[submodule "submodules/eigen3_nnls"]
+	path = submodules/eigen3_nnls
+	url = https://github.com/hmatuschek/eigen3-nnls
