@@ -1,0 +1,93 @@
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <link rel='stylesheet'
+        type='text/css'
+        href=
+'https://framework.web.cern.ch/framework/2.0/fonts/PTSansWeb/PTSansWeb.css'/>
+    <style>
+      body {
+        max-width: 75ch;
+        margin: 4ch auto 4ch auto;
+        font-family: 'PT Sans', sans-serif;
+      }
+
+      h1 {
+        text-align: center;
+        padding: 2ch 0 2ch 0;
+      }
+
+      .author {
+        text-align: center;
+        padding: 0 0 2ch 0;
+      }
+    </style>
+  </head>
+<body>
+<h1>A Real-time High-quality Black Hole Shader</h1>
+
+<p class="author">Eric Bruneton, 2020</p>
+
+<center>
+<a href="images/black_hole_near_orion.jpg">
+<img src="images/black_hole_near_orion.jpg" width="100%">
+</a>
+</center>
+
+<h2>Introduction</h2>
+
+<p>We propose a real-time method to render high-quality images of a non-rotating
+black hole with an accretion disc and background stars. Our method is based on
+bream tracing, but uses precomputed tables to find the intersections of each
+curved light beam with the scene in constant time per pixel. It also uses a
+specific texture filtering scheme to integrate the contribution of the light
+sources to each beam.
+
+<p><b>TODO</b> <i>provide a full description of the method</i>. The
+<a href="https://github.com/ebruneton/black_hole_shader">full source code</a>
+is available under the BSD license. See also our
+<a href="demo/demo.html">online demo</a>.
+
+<h2>Gallery</h2>
+
+<p>Here are some images obtained with our method.
+
+<center>
+<a href="images/black_hole_with_magellanic_ring.jpg">
+<img src="images/black_hole_with_magellanic_ring.jpg" width="100%">
+</a>
+<p>The <a href="https://en.wikipedia.org/wiki/Large_Magellanic_Cloud">Large
+Magellanic Cloud</a> forming an 
+<a href="https://en.wikipedia.org/wiki/Einstein_ring">Einstein ring</a>
+around the black hole.
+</center>
+
+<br>
+<br>
+
+<center>
+<a href="images/black_hole_doppler.jpg">
+<img src="images/black_hole_doppler.jpg" width="100%">
+</a>
+<p>Near the speed of light lengths are contracted in the direction of motion
+(from left to right), colors are blue-shifted ahead and red-shifted behind
+(due to <a href="https://en.wikipedia.org/wiki/Relativistic_Doppler_effect">
+relativistic Doppler effects</a>) and their intensity increases ahead and
+decreases behind (due to
+<a href="https://en.wikipedia.org/wiki/Relativistic_beaming">relativistic
+beaming effects</a>).
+</center>
+
+<br>
+<br>
+
+<center>
+<a href="images/black_hole_and_disc_doppler.jpg">
+<img src="images/black_hole_and_disc_doppler.jpg" width="100%">
+</a>
+<p>Same conditions as above, but with an accretion disc too.
+</center>
+
+</body>
+</html>
+
