@@ -124,7 +124,8 @@ vec4 DiscColor(vec2 p, float t, bool top_side, float doppler_factor);
 // Returns the given color when shifted by the given Doppler factor. The 3D
 // texture should contain this color at texture coord (r, 2*g, d) where r, g is
 // the rg chromaticity and d = atan(log(doppler_factor) / 0.21) / 3 + 0.5.
-vec3 DefaultDoppler(sampler3D doppler_texture, vec3 rgb, float doppler_factor) {
+vec3 DefaultDoppler(highp sampler3D doppler_texture, vec3 rgb, 
+    float doppler_factor) {
   float sum = rgb.r + rgb.g + rgb.b;
   if (sum == 0.0) {
     return vec3(0.0);
