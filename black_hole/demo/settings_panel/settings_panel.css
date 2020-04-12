@@ -1,0 +1,178 @@
+/**
+ * Copyright (c) 2020 Eric Bruneton
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holders nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+.sp-panel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0 8px;
+}
+
+.sp-panel h3 {
+  margin: 8px 0;
+  font-size: 1.1em;
+}
+
+.sp-panel summary {
+  margin: 8px 0;
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+.sp-hidden {
+  display: none;
+}
+
+.sp-settings-container {
+  padding-left: 8px;
+}
+
+.sp-setting {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sp-setting label {
+  margin-right: 8px;
+}
+
+.sp-slider-container {
+  display: flex;
+  height: 12px;
+  margin-left: auto;
+  align-items: center;
+}
+
+.sp-slider-container button {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: #FFF;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 12px;
+  text-align: center;
+  text-shadow: 1px 1px 2px black;
+  user-select: none;
+}
+
+.sp-slider-container button[disabled] {
+  cursor: initial;
+  opacity: 0.2;
+}
+
+.sp-slider-container input[type="range"] {
+  width: 128px;
+  height: 12px;
+  margin: 0;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #000;
+  box-shadow: 1px 1px 2px #000;
+  cursor: pointer;
+  outline: none;
+  opacity: 0.5;
+  overflow: hidden;
+}
+
+.sp-slider-container input[type="range"]::-webkit-slider-thumb {
+  width: 0px;
+  height: 12px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #00F;
+  box-shadow: -100vw 0 0 100vw #00F;
+}
+
+.sp-slider-container input[type="range"]::-moz-range-thumb {
+  width: 0px;
+  height: 12px;
+  background: #00F;
+  box-shadow: -100vw 0 0 100vw #00F;
+  box-sizing: border-box;     
+}
+
+.sp-slider-container input[type="range"][disabled] {
+  cursor: initial;
+  opacity: 0.2;
+}
+
+.sp-value {
+  width: 48px;
+  margin-left: 8px;
+  font-size: 0.8em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-setting input[type="checkbox"] {
+  width: 16px;
+  margin: 0 180px 0 0;
+  padding: 0;
+}
+
+.sp-setting.sp-last {
+  margin-bottom: 16px;
+}
+
+.sp-play-container {
+  width: 192px;
+  margin: 4px 0;        
+  line-height: 0;
+}
+
+.sp-play,
+.sp-pause,
+.sp-stop {
+  width: 24px;
+  padding: 0;
+  margin: 0 8px 0 0;
+  background: transparent;
+  border: 0;
+  color: #FFF;
+  cursor: pointer;
+  font-size: 24px;
+  text-align: center;
+  text-shadow: 1px 1px 2px black;
+  user-select: none;
+}
+
+.sp-panel.sp-playing .sp-play,
+.sp-panel:not(.sp-playing) .sp-pause,
+.sp-panel:not(.sp-playing) .sp-stop {
+  display: none;
+}
+

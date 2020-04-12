@@ -1,0 +1,120 @@
+/**
+ * Copyright (c) 2020 Eric Bruneton
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holders nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+html, body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  background-color: #888;
+  color: #FFF;
+  font-family: 'PT Sans', sans-serif;
+  font-size: 14px;
+  text-shadow: 1px 1px 2px black;
+  user-select: none;
+  overflow: hidden;
+}
+
+.cv-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.cv-error-panel {
+  position: absolute;
+  top: 33%;
+  width: 30%;
+  display: flex;
+  margin: 0 calc(35% - 16px);
+  padding: 16px;
+  align-items: center;
+  background-color: #A00;
+  border: 1px solid #FFF;
+  box-shadow: 1px 1px 2px #000;
+  text-align: center;
+  text-shadow: none;
+  z-index: 2;
+}
+
+.cv-warning {
+  background-color: #FB3;
+  color: #000;
+}
+
+.cv-loading-panel {
+  position: absolute;
+  bottom: 16%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  z-index: 1;
+}
+
+.cv-loading-bar {
+  position: relative;
+  width: 50%;
+  height: 16px;
+  margin: 16px 0;
+  border: 1px solid #FFF;
+  box-shadow: 1px 1px 2px #000;
+  opacity: 0.5;
+}
+
+.cv-loading-bar-value {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 33%;
+  background-color: #F00;
+}
+
+.cv-loaded {
+  display: none;
+}
+
+.cv-copyright {
+  position: absolute;
+  bottom: 4px;
+  right: 8px;
+  color: #FFF;
+}
+
+.cv-copyright a {
+  color: #FFF;
+  font-style: italic;
+  text-decoration: none;
+}
+
+.cv-hidden {
+  display: none;
+}

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+<!--
+ * Copyright (c) 2020 Eric Bruneton
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holders nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+-->
+    <title>Black Hole Shader Demo</title>
+    <link rel="stylesheet"
+          type="text/css"
+          href=
+"https://framework.web.cern.ch/framework/2.0/fonts/PTSansWeb/PTSansWeb.css"/>
+    <style>
+@include output/black_hole/demo/camera_view/camera_view.css
+@include output/black_hole/demo/orbit_panel/orbit_panel.css
+@include output/black_hole/demo/settings_panel/settings_panel.css
+    </style>
+    <script>
+@include output/black_hole/demo/model/model.js
+@include output/black_hole/demo/url_params/url_params.js
+(function() {
+@include output/bloom/bloom.js
+BlackHoleShaderDemoApp.Bloom = Bloom;
+})();
+@include output/black_hole/demo/camera_view/texture_manager.js
+@include output/black_hole/demo/camera_view/shader_manager.js
+@include output/black_hole/demo/camera_view/camera_view.js
+@include output/black_hole/demo/orbit_panel/orbit_panel.js
+@include output/black_hole/demo/settings_panel/settings_panel.js
+    </script>
+  </head>
+  <body>
+    <script type="x-shader/x-vertex" id="vertex_shader">
+@include output/black_hole/demo/camera_view/vertex_shader.glsl
+    </script>
+    <script type="x-shader/x-fragment" id="fragment_shader">
+@include output/black_hole/demo/camera_view/fragment_shader.glsl
+    </script>
+    <script type="x-shader/x-fragment" id="black_hole_shader">
+@include output/black_hole/black_hole_shader.glsl
+    </script>
+@include output/black_hole/demo/camera_view/camera_view.html
+@include output/black_hole/demo/orbit_panel/orbit_panel.html
+@include output/black_hole/demo/settings_panel/settings_panel.html
+  </body>
+</html>

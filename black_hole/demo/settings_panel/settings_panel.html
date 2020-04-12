@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+<!--
+ * Copyright (c) 2020 Eric Bruneton
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holders nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+-->
+    <title>settings_panel tests</title>
+    <link rel="stylesheet" type="text/css" href="settings_panel.css"/>
+    <style>
+      html, body {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        margin: 0;
+        background-color: #888;
+        color: #FFF;
+        font-family: sans-serif;
+        font-size: 14px;
+        text-shadow: 1px 1px 2px black;
+      }
+    </style>
+    <script src="../model/model.js"></script>
+    <script src="settings_panel.js"></script>
+  </head>
+  <body>
+    <form id="settings_panel" class="sp-panel sp-hidden">
+      <details open="true" class="sp-settings-container">
+        <summary>Camera</summary>
+
+        <div class="sp-setting" 
+             title="Camera exposure, in stops\n \
+                    (one stop = doubling or halving \
+                     the amount of light you let in)\n \
+                    \n \
+                    Shortcut keys: '+' / '-' to increase / decrease exposure.">
+          <label>Exposure</label>
+          <span class="sp-slider-container">
+            <button type="button">-</button>
+            <input type="range" id="sp_exposure">
+            <button type="button">+</button>
+          </span>
+          <span id="sp_exposure_value" class="sp-value"></span>
+        </div>
+
+        <div class="sp-setting"
+             title="Bloom intensity\n \
+                    (amount of scattering and diffraction in the camera)">
+          <label>Bloom</label>
+          <span class="sp-slider-container">
+            <button type="button">-</button>
+            <input type="range" id="sp_bloom">
+            <button type="button">+</button>
+          </span>
+          <span id="sp_bloom_value" class="sp-value"></span>
+        </div>
+
+        <h3>Orbit</h3>
+
+        <div class="sp-settings-container">
+          <div class="sp-setting" 
+               title="Initial distance of the observer from the black hole \
+                      center\n (i.e. the Schwarzschild 'r' coordinate, divided \
+                      by the black hole radius)\n \
+                      \n \
+                      Shortcut: use the mouse wheel to increase / decrease \
+                      the initial distance">
+            <label>Initial distance</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_start_radius">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_start_radius_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting"
+               title="Initial direction of the observer's trajectory\n \
+                      (in degrees)">
+            <label>Initial direction</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_start_direction">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_start_direction_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting" 
+               title="Initial speed of the observer\n \
+                      (with respect to a static observer, \
+                       as a fraction of the speed of light)">
+            <label>Initial speed</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_start_speed">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_start_speed_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting" 
+               title="Inclination of the observer's orbit plane\n \
+                      (with respect to the accretion disc, in degrees)">
+            <label>Inclination</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_orbit_inclination">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_orbit_inclination_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting">
+            <label>Motion</label>
+            <span class="sp-play-container">
+              <button id="sp_play" type="button" class="sp-play"
+                      title="Play\n \n Shortcut key: 'p'">⏵</button>
+              <button id="sp_pause" type="button" class="sp-pause" 
+                      title="Pause\n \n Shortcut key: 'p'">⏸</button>
+              <button id="sp_stop" type="button" class="sp-stop" 
+                      title="Stop">⏹</button>
+            </span>
+          </div>
+        </div>
+      </details>
+
+      <details open="true" class="sp-settings-container">
+        <summary>Physics</summary>
+
+        <div class="sp-setting" 
+             title="Enables the bending of light by the gravitational field">
+          <label for="lensing">Lensing</label>
+          <input type="checkbox" name="lensing" id="sp_lensing">
+        </div>
+
+        <div class="sp-setting"
+             title="Enables the relativistic and gravitational \
+                    Doppler and beaming effects">
+          <label for="doppler">Doppler</label>
+          <input type="checkbox" name="doppler" id="sp_doppler">
+        </div>
+      </details>
+
+      <details open="true" class="sp-settings-container">
+        <summary>Scene</summary>
+
+        <!-- TODO: add the 'rocket' setting -->
+
+        <div class="sp-setting" 
+             title="Enables non-realistic grid patterns\n \
+                    (to better illustrate the physical phenomena)">
+          <label for="grid">Grid</label>
+          <input type="checkbox" name="grid" id="sp_grid">
+        </div>
+
+        <div class="sp-setting" 
+             title="Black hole mass (in Solar mass)">
+          <label>Black hole mass</label>
+          <span class="sp-slider-container">
+            <button type="button">-</button>
+            <input type="range" id="sp_black_hole_mass">
+            <button type="button">+</button>
+          </span>
+          <span id="sp_black_hole_mass_value" class="sp-value"></span>
+        </div>
+
+        <h3>Disc</h3>
+
+        <div class="sp-settings-container">
+          <div class="sp-setting"
+               title="Density of the accretion disc (in unspecified units)">
+            <label>Density</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_disc_density">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_disc_density_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting"
+               title="Opacity of the accretion disc (in percentage)">
+            <label>Opacity</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_disc_opacity">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_disc_opacity_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting" 
+               title="Maximum temperature of the accretion disc (in Kelvins)">
+            <label>Temperature</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_disc_temperature">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_disc_temperature_value" class="sp-value"></span>
+          </div>
+        </div>
+
+        <h3>Stars</h3>
+
+        <div class="sp-settings-container">
+          <div class="sp-setting" 
+               title="Orientation of the star field (yaw)\n \
+                      \n \
+                      Shortcut: CTRL + mouse drag">
+            <label>Yaw</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_stars_yaw">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_stars_yaw_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting"
+               title="Orientation of the star field (pitch)\n \
+                      \n \
+                      Shortcut: CTRL + mouse drag">
+            <label>Pitch</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_stars_pitch">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_stars_pitch_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting" 
+               title="Orientation of the star field (roll)\n \
+                      \n \
+                      Shortcut: CTRL + mouse drag">
+            <label>Roll</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_stars_roll">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_stars_roll_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting sp-last" 
+               title="Enables stars">
+            <label for="stars">Enabled</label>
+            <input type="checkbox" name="stars" id="sp_stars" checked>
+          </div>
+
+        </div>
+      </details>
+    </form>
+  </body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+<!--
+ * Copyright (c) 2020 Eric Bruneton
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holders nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+-->
+    <title>camera_view tests</title>
+    <link rel="stylesheet" type="text/css" href="camera_view.css"/>
+    <script src="../model/model.js"></script>
+    <script src="utils.js"></script>
+    <script src="camera_view.js"></script>
+  </head>
+  <body>
+    <div class="cv-container">
+      <canvas id="camera_view" width="400" height="300"></canvas>
+      <div id="cv_error_panel" class="cv-error-panel cv-hidden">
+      </div>
+      <div id="cv_loading_panel" class="cv-loading-panel">
+        <span>Loading stars data...</span>
+        <div class="cv-loading-bar">
+          <div id="cv_loading_bar" class="cv-loading-bar-value"></div>
+        </div>
+        <span>Press <em>space</em> to show / hide the User Interface</span>
+      </div>
+      <div class="cv-copyright">@2020 Eric Bruneton. 
+        <a href="https://github.com/ebruneton/black_hole_shader"
+           target="_blank">
+          GitHub project
+        </a>. Star data from 
+        <a href="https://www.cosmos.esa.int/web/gaia/dr2" 
+           target="_blank">
+          Gaia DR2
+        </a> and 
+        <a href="https://www.cosmos.esa.int/web/hipparcos/tycho-2" 
+           target="_blank">
+          Tycho 2
+        </a>
+      </div>
+    </div>
+  </body>
+</html>
