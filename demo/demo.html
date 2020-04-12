@@ -1,0 +1,3375 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+<!--
+ * Copyright (c) 2020 Eric Bruneton
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holders nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+-->
+    <title>Black Hole Shader Demo</title>
+    <link rel="stylesheet"
+          type="text/css"
+          href=
+"https://framework.web.cern.ch/framework/2.0/fonts/PTSansWeb/PTSansWeb.css"/>
+    <style>
+
+html, body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  background-color: #888;
+  color: #FFF;
+  font-family: 'PT Sans', sans-serif;
+  font-size: 14px;
+  text-shadow: 1px 1px 2px black;
+  user-select: none;
+  overflow: hidden;
+}
+
+.cv-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.cv-error-panel {
+  position: absolute;
+  top: 33%;
+  width: 30%;
+  display: flex;
+  margin: 0 calc(35% - 16px);
+  padding: 16px;
+  align-items: center;
+  background-color: #A00;
+  border: 1px solid #FFF;
+  box-shadow: 1px 1px 2px #000;
+  text-align: center;
+  text-shadow: none;
+  z-index: 2;
+}
+
+.cv-warning {
+  background-color: #FB3;
+  color: #000;
+}
+
+.cv-loading-panel {
+  position: absolute;
+  bottom: 16%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  z-index: 1;
+}
+
+.cv-loading-bar {
+  position: relative;
+  width: 50%;
+  height: 16px;
+  margin: 16px 0;
+  border: 1px solid #FFF;
+  box-shadow: 1px 1px 2px #000;
+  opacity: 0.5;
+}
+
+.cv-loading-bar-value {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 33%;
+  background-color: #F00;
+}
+
+.cv-loaded {
+  display: none;
+}
+
+.cv-copyright {
+  position: absolute;
+  bottom: 4px;
+  right: 8px;
+  color: #FFF;
+}
+
+.cv-copyright a {
+  color: #FFF;
+  font-style: italic;
+  text-decoration: none;
+}
+
+.cv-hidden {
+  display: none;
+}
+
+.op-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  overflow: hidden;
+}
+
+.op-hidden {
+  display: none;
+}
+
+.op-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: #F00;
+  border-radius: 50%;
+  transform: translate(-4px, -4px);
+}
+
+.op-info {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 8px;
+}
+
+
+.sp-panel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0 8px;
+}
+
+.sp-panel h3 {
+  margin: 8px 0;
+  font-size: 1.1em;
+}
+
+.sp-panel summary {
+  margin: 8px 0;
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+.sp-hidden {
+  display: none;
+}
+
+.sp-settings-container {
+  padding-left: 8px;
+}
+
+.sp-setting {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sp-setting label {
+  margin-right: 8px;
+}
+
+.sp-slider-container {
+  display: flex;
+  height: 12px;
+  margin-left: auto;
+  align-items: center;
+}
+
+.sp-slider-container button {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: #FFF;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 12px;
+  text-align: center;
+  text-shadow: 1px 1px 2px black;
+  user-select: none;
+}
+
+.sp-slider-container button[disabled] {
+  cursor: initial;
+  opacity: 0.2;
+}
+
+.sp-slider-container input[type="range"] {
+  width: 128px;
+  height: 12px;
+  margin: 0;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #000;
+  box-shadow: 1px 1px 2px #000;
+  cursor: pointer;
+  outline: none;
+  opacity: 0.5;
+  overflow: hidden;
+}
+
+.sp-slider-container input[type="range"]::-webkit-slider-thumb {
+  width: 0px;
+  height: 12px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #00F;
+  box-shadow: -100vw 0 0 100vw #00F;
+}
+
+.sp-slider-container input[type="range"]::-moz-range-thumb {
+  width: 0px;
+  height: 12px;
+  background: #00F;
+  box-shadow: -100vw 0 0 100vw #00F;
+  box-sizing: border-box;     
+}
+
+.sp-slider-container input[type="range"][disabled] {
+  cursor: initial;
+  opacity: 0.2;
+}
+
+.sp-value {
+  width: 48px;
+  margin-left: 8px;
+  font-size: 0.8em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-setting input[type="checkbox"] {
+  width: 16px;
+  margin: 0 180px 0 0;
+  padding: 0;
+}
+
+.sp-setting.sp-last {
+  margin-bottom: 16px;
+}
+
+.sp-play-container {
+  width: 192px;
+  margin: 4px 0;        
+  line-height: 0;
+}
+
+.sp-play,
+.sp-pause,
+.sp-stop {
+  width: 24px;
+  padding: 0;
+  margin: 0 8px 0 0;
+  background: transparent;
+  border: 0;
+  color: #FFF;
+  cursor: pointer;
+  font-size: 24px;
+  text-align: center;
+  text-shadow: 1px 1px 2px black;
+  user-select: none;
+}
+
+.sp-panel.sp-playing .sp-play,
+.sp-panel:not(.sp-playing) .sp-pause,
+.sp-panel:not(.sp-playing) .sp-stop {
+  display: none;
+}
+
+    </style>
+    <script>
+
+BlackHoleShaderDemoApp = {};
+(function() {
+
+// The speed of light.
+const C = 299792458;
+
+// The gravitational constant.
+const G = 6.6743e-11;
+
+// The mass of the Sun.
+const SOLAR_MASS = 1.98847e30;
+
+class BooleanValue {
+  constructor(model, defaultValue) {
+    this.model = model;
+    this.value = defaultValue;
+    this.defaultValue = defaultValue;
+  }
+  getDefaultValue() { return this.defaultValue; }
+  getValue() { return this.value; }
+  setValue(value) {
+    this.value = !!value;
+    this.model.notifyListeners();
+  }
+}
+
+class QuantizedValue {
+  constructor(model, f, defaultIndex, size = 1000) {
+    this.model = model;
+    this.values = Array.from({length: size + 1}, (value, i) => f(i / size));
+    this.index = defaultIndex;
+    this.defaultIndex = defaultIndex;
+  }
+  getSize() { return this.values.length; }
+  getDefaultIndex() { return this.defaultIndex; }
+  getIndex() { return this.index; }
+  getValue() { return this.values[this.index]; }
+  setIndex(index) { 
+    this.index = Math.max(0, Math.min(index, this.values.length - 1)); 
+    this.model.notifyListeners();
+  }
+  setValue(value) {
+    let i0 = 0;
+    let i1 = this.values.length - 1;
+    if (value <= this.values[i0]) {
+      this.index = i0;
+    } else if (value >= this.values[i1]) {
+      this.index = i1;
+    } else {
+      while (i1 > i0 + 1) {
+        const i = Math.floor((i0 + i1) / 2);
+        if (value < this.values[i]) {
+          i1 = i;
+        } else {
+          i0 = i;
+        }
+      }
+      this.index = value - this.values[i0] < this.values[i1] - value ? i0 : i1;
+    }
+    this.model.notifyListeners();
+  }
+}
+
+const State = {
+  STOPPED: 'STOPPED',
+  PLAYING: 'PLAYING',
+  PAUSED: 'PAUSED'
+};
+
+const safeSqrt = function(x) {
+  return Math.sqrt(Math.max(x, 0));
+};
+
+const matrixProduct = function(a, b) {
+  const c = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+  for (let i = 0; i < 4; ++i) {
+    for (let j = 0; j < 4; ++j) {
+      for (let k = 0; k < 4; ++k) {
+        c[i][j] += a[i][k] * b[k][j];
+      }
+    }
+  }
+  return c;
+};
+
+class Model {
+  constructor() {
+    this.cameraYaw = 
+        new QuantizedValue(this, (x) => 2 * Math.PI * x, 0, 36000);
+    this.cameraPitch =
+        new QuantizedValue(this, (x) => Math.PI * (x - 0.5), 9000, 18000);
+    this.exposure = 
+        new QuantizedValue(this, (x) => Math.pow(10, 3 * x - 3), 500);
+    this.bloom = 
+        new QuantizedValue(this, (x) => x, 500);
+    this.startRadius = 
+        new QuantizedValue(this, (x) => Math.max(1 + 39 * x * x, 1.01), 940);
+    this.startDirection = 
+        new QuantizedValue(this, (x) => Math.PI * (x - 0.5), 1800, 1800);
+    this.startSpeed = 
+        new QuantizedValue(this, (x) => Math.min(x * x, 0.99), 347);
+    this.orbitInclination = 
+        new QuantizedValue(this, (x) => Math.PI * (x - 0.5), 970, 1800);
+    this.lensing =
+        new BooleanValue(this, true);
+    this.doppler =
+        new BooleanValue(this, true);
+    this.rocket =
+        new BooleanValue(this, true);
+    this.grid =
+        new BooleanValue(this, false);
+    this.blackHoleMass = 
+        new QuantizedValue(this, (x) => 10 * Math.pow(10, 6 * x), 330);
+    this.discDensity = 
+        new QuantizedValue(this, (x) => 100 * Math.pow(x, 10), 500);
+    this.discOpacity =
+        new QuantizedValue(this, (x) => x, 300);
+    this.discTemperature = 
+        new QuantizedValue(this, (x) => 1000 * Math.pow(10, x), 350);
+    this.starsYaw = 
+        new QuantizedValue(this, (x) => 2 * Math.PI * (x - 0.5), 1800, 3600);
+    this.starsPitch = 
+        new QuantizedValue(this, (x) => Math.PI * (x - 0.5), 900, 1800);
+    this.starsRoll = 
+        new QuantizedValue(this, (x) => 2 * Math.PI * (x - 0.5), 1800, 3600);
+    this.stars =
+        new BooleanValue(this, true);
+    this.starsMatrix = undefined;
+
+    // The current state of the camera (i.e. the observer) motion.
+    this.state = State.STOPPED;
+    // The constant of motion dt / dTau = e / (1 - u) of the camera.
+    this.e = undefined;
+    // The constant of motion dphi / dTau = l u^2 of the camera.
+    this.l = undefined;
+    // The current value of the Schwarzschild's t coordinate of the camera.
+    this.t = 0;
+    // The current value of the Schwarzschild's r coordinate of the camera.
+    this.r = undefined;
+    // The current value of the derivative of r with respect to proper time.
+    this.drOverDtau = undefined;
+    // The current value of the Schwarzschild's theta coordinate of the camera.
+    this.worldTheta = undefined;
+    // The current value of the Schwarzschild's phi coordinate of the camera.
+    this.worldPhi = undefined;
+    // The current value of the Schwarzschild's phi coordinate of the camera (in
+    // rotated coordinates such that its orbit is in the equatorial plane).
+    this.phi = undefined;
+    // The Lorentz transformation matrix specifying the current camera 
+    // orientation and velocity.
+    this.lorentz = undefined;
+
+    this.blackHoleRadiusMeters = undefined;
+    this.speedMetersPerSecond = undefined;
+    this.localElapsedTimeSeconds = 0;
+    this.globalElapsedTimeSeconds = 0;
+
+    this.updateDerivedValues();
+    this.listeners = [];
+  }
+
+  addListener(listener) {
+    this.listeners.push(listener);
+  }
+
+  setState(state) {
+    if (state != this.state) {
+      this.state = state;
+      if (state == State.PLAYING) {
+        this.t = 0;
+        this.localElapsedTimeSeconds = 0;
+        this.globalElapsedTimeSeconds = 0;
+      }
+      this.notifyListeners(false);
+    }
+  }
+
+  updateOrbit(dTauSeconds) {
+    const M = this.blackHoleMass.getValue() * SOLAR_MASS;
+    const dTauOverDtauSeconds = C * C * C / ( 2 * G * M);
+    const dTau = dTauOverDtauSeconds * dTauSeconds;
+
+    let u = 1 / this.r;
+    const e = this.e;
+    const l = this.l;
+    const dtOverDtau = 
+        this.state == State.PLAYING ? e / (1 - u) : 1 / Math.sqrt(1 - u);
+    this.t += dtOverDtau * dTau;
+    this.localElapsedTimeSeconds += dTauSeconds;
+    this.globalElapsedTimeSeconds += dtOverDtau * dTauSeconds;
+
+    if (this.state == State.PLAYING) {
+      const n = 1000;
+      const dTauN = dTau / n;
+      for (let i = 0; i < n; ++i) {
+        u = 1 / this.r;
+        const d2rOverDtau2 = u * u * (l * l * (2 - 3 * u) * u - 1) / 2;
+        this.drOverDtau += d2rOverDtau2 * dTauN;
+        this.r += this.drOverDtau * dTauN;
+        this.phi += l * u * u * dTauN;
+        if (this.r <= 1.0 || this.r > 100.0) {
+          this.setState(State.STOPPED);
+          return;
+        }
+      }
+    }
+    this.notifyListeners(false);
+  }
+
+  notifyListeners(settingsChanged = true) {
+    this.updateDerivedValues();
+    for (let listener of this.listeners) {
+      if (settingsChanged) {
+        listener.onSettingsChange();
+      }
+      listener.onOrbitChange();
+    }
+  }
+
+  updateDerivedValues() {
+    this.updateStarsMatrix();
+    this.updateCameraCoordinates();
+    this.updateCameraLorentzTransform();
+    this.updateOrbitInfo();
+  }
+
+  updateStarsMatrix() {
+    const cy = Math.cos(this.starsYaw.getValue() + Math.PI);
+    const sy = Math.sin(this.starsYaw.getValue() + Math.PI);
+    const cp = Math.cos(this.starsPitch.getValue());
+    const sp = Math.sin(this.starsPitch.getValue());
+    const cr = Math.cos(this.starsRoll.getValue());
+    const sr = Math.sin(this.starsRoll.getValue());
+    this.starsMatrix = [
+                     cp * cy,                cp * sy,     -sp,
+      sr * sp * cy - cr * sy, sr * sp * sy + cr * cy, sr * cp,
+      cr * sp * cy + sr * sy, cr * sp * sy - sr * cy, cr * cp
+    ];
+  }
+
+  updateCameraCoordinates() {
+    const r0 = this.startRadius.getValue();
+    const delta = this.startDirection.getValue();
+    const v = this.startSpeed.getValue();
+
+    // Compute the constants of motion from the initial conditions r0, delta, v.
+    const u0 = 1 / r0;
+    const cotDelta = 1 / Math.tan(delta);
+    const e2 = (1 - u0) / (1 - v * v);
+    const l2 = (e2 - 1 + u0) / (u0 * u0 * (1 - u0 + cotDelta * cotDelta));
+    const e = safeSqrt(e2);
+    const l = delta == 0 ? 0 : (delta > 0 ? 1 : -1) * safeSqrt(l2);
+    this.e = e;
+    this.l = l;
+
+    // Update the Schwarzschild coordinates of the camera.
+    if (this.state == State.STOPPED) {
+      this.r = r0;
+      this.drOverDtau = -safeSqrt(e2 - (1 - u0) - l * l * u0 * u0 * (1 - u0));
+      this.phi = 0;
+    }
+    const ci = Math.cos(this.orbitInclination.getValue());
+    const si = Math.sin(this.orbitInclination.getValue());
+    const cphi = Math.cos(this.phi);
+    const sphi = Math.sin(this.phi);
+    this.worldTheta = Math.acos(cphi * si);
+    this.worldPhi = Math.atan2(sphi, cphi * ci);
+  }
+
+  updateCameraLorentzTransform() {
+    // Compute the 4-velocity vector of the camera (in rotated Schwarzschild
+    // coordinates such that its orbit is in the equatorial plane).
+    const e = this.e;
+    const l = this.l;
+    const u = 1 / this.r;
+    let k;
+    if (this.state == State.PLAYING) {
+      k = [e / (1 - u), this.drOverDtau, 0, l * u * u];
+    } else {
+      k = [1 / Math.sqrt(1 - u), 0, 0, 0];
+    }
+
+    // Compute the rotation matrix from the global Schwarzschild reference frame
+    // e_t, e_r, e_theta, e_phi to the rotated Schwarzschild reference frame
+    // such that the camera orbit is in the equatorial plane.
+    const ct = Math.cos(this.worldTheta);
+    const st = Math.sin(this.worldTheta);
+    const cp = Math.cos(this.worldPhi);
+    const sp = Math.sin(this.worldPhi);
+    const ci = Math.cos(this.orbitInclination.getValue());
+    const si = Math.sin(this.orbitInclination.getValue());
+    const ca = si * ct * cp + st * ci;
+    const sa = si * sp;
+    const orbitRot = [
+      [1, 0,  0,   0],
+      [0, 1,  0,   0],
+      [0, 0, ca, -sa],
+      [0, 0, sa,  ca]];
+
+    // Compute the 4-velocity of the camera in the *rotated* reference frame of 
+    // a STATIC observer at this location.
+    const k_s = 
+        [k[0] * Math.sqrt(1 - u), k[1] / Math.sqrt(1 - u), k[2] / u, k[3] / u];
+    // Compute the speed vector of the camera in the *rotated* reference frame
+    // of a STATIC observer at this location.
+    const v = [k_s[1] / k_s[0], k_s[2] / k_s[0], k_s[3] / k_s[0]];
+    // Compute the corresponding Lorentz factor gamma and the corresponding
+    // Lorentz boost matrix (for a rotated static observer).
+    const v2 = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
+    const gamma = 1 / Math.sqrt(1 - v2);
+    const gv = v2 == 0 ? 0 : (gamma - 1) / v2;
+    const boost = [
+        [     gamma,       gamma*v[0],       gamma*v[1],       gamma*v[2]],
+        [gamma*v[0], 1 + gv*v[0]*v[0],     gv*v[0]*v[1],     gv*v[0]*v[2]],
+        [gamma*v[1],     gv*v[1]*v[0], 1 + gv*v[1]*v[1],     gv*v[1]*v[2]],
+        [gamma*v[2],     gv*v[2]*v[0],     gv*v[2]*v[1], 1 + gv*v[2]*v[2]]];
+
+    // Compute the rotation matrix of the camera, in its local reference frame.
+    const cosY = Math.cos(this.cameraYaw.getValue());
+    const sinY = Math.sin(this.cameraYaw.getValue());
+    const cosP = Math.cos(this.cameraPitch.getValue());
+    const sinP = Math.sin(this.cameraPitch.getValue());
+    const cameraRot = [
+        [1,            0,     0,            0],
+        [0,        -sinY,     0,         cosY],
+        [0, -cosY * sinP, -cosP, -sinY * sinP],
+        [0,  cosY * cosP, -sinP,  sinY * cosP]];
+
+    // The final Lorentz transform is the product of the 3 above matrices.
+    this.lorentz = matrixProduct(cameraRot, matrixProduct(boost, orbitRot));
+  }
+
+  updateOrbitInfo() {
+    const M = this.blackHoleMass.getValue() * SOLAR_MASS;
+    this.blackHoleRadiusMeters = 2 * G  * M / (C * C);
+    const e = this.e;
+    const u = 1 / this.r;
+    if (this.state == State.PLAYING) {
+      this.speedMetersPerSecond = Math.sqrt(1 - (1 - u) / (e * e)) * C;
+      this.timeDilationFactor = e / (1 - u);
+    } else {
+      const rMeters = this.r * this.blackHoleRadiusMeters;
+      this.speedMetersPerSecond = 0;
+      this.timeDilationFactor = 1 / Math.sqrt(1 - u);
+    }
+  }
+}
+
+BlackHoleShaderDemoApp.State = State;
+BlackHoleShaderDemoApp.model = new Model();
+})();
+
+(function(model, State){
+
+class BoolParam {
+  constructor(name, model) {
+    this.name = name;
+    this.model = model;
+  }
+  read(searchParams) {
+    const value = searchParams.get(this.name);
+    if (this.model.getDefaultValue()) {
+      this.model.setValue(value != '0');
+    } else {
+      this.model.setValue(value == '1');
+    }
+  }
+  write(searchParams) {
+    if (this.model.getValue() == this.model.getDefaultValue()) {
+      searchParams.delete(this.name);
+    } else {
+      searchParams.set(this.name, this.model.getValue() ? '1' : '0');
+    }
+  }
+}
+
+class IntParam {
+  constructor(name, model) {
+    this.name = name;
+    this.model = model;
+  }
+  read(searchParams) {
+    const index = parseInt(searchParams.get(this.name));
+    if (index >= 0) {
+      this.model.setIndex(index);
+    }
+  }
+  write(searchParams) {
+    if (this.model.getIndex() == this.model.getDefaultIndex()) {
+      searchParams.delete(this.name);
+    } else {
+      searchParams.set(this.name, this.model.getIndex());
+    }
+  }
+}
+
+class UrlParams {
+  constructor(model) {
+    this.model = model;
+
+    this.params = [];
+    this.params.push(new IntParam('cy', model.cameraYaw));
+    this.params.push(new IntParam('cp', model.cameraPitch));
+    this.params.push(new IntParam('ce', model.exposure));
+    this.params.push(new IntParam('cb', model.bloom));
+    this.params.push(new IntParam('or', model.startRadius));
+    this.params.push(new IntParam('od', model.startDirection));
+    this.params.push(new IntParam('os', model.startSpeed));
+    this.params.push(new IntParam('oi', model.orbitInclination));
+    this.params.push(new BoolParam('pl', model.lensing));
+    this.params.push(new BoolParam('pd', model.doppler));
+    this.params.push(new BoolParam('sr', model.rocket));
+    this.params.push(new BoolParam('sg', model.grid));
+    this.params.push(new IntParam('bhm', model.blackHoleMass));
+    this.params.push(new IntParam('dd', model.discDensity));
+    this.params.push(new IntParam('do', model.discOpacity));
+    this.params.push(new IntParam('dt', model.discTemperature));
+    this.params.push(new IntParam('sfy', model.starsYaw));
+    this.params.push(new IntParam('sfp', model.starsPitch));
+    this.params.push(new IntParam('sfr', model.starsRoll));
+    this.params.push(new BoolParam('sfe', model.stars));
+    this.lastState = undefined;
+
+    this.timeout = null;
+    this.readUrlParams();
+    this.model.addListener(this);
+  }
+
+  onSettingsChange() {
+    if (this.timeout) {
+      clearTimeout(this.timeout);
+    }
+    this.timeout = setTimeout(() => this.writeUrlParams(), 500);
+  }
+
+  onOrbitChange() {
+    if (this.model.state == this.lastState) {
+      return;
+    }
+    this.lastState = this.model.state;
+    if (this.model.state != State.PLAYED) {
+      this.writeUrlParams();
+    }
+  }
+
+  readUrlParams() {
+    const searchParams = new URLSearchParams(window.location.search);
+    for (let param of this.params) {
+      param.read(searchParams);
+    }
+    const r = parseFloat(searchParams.get('r'));
+    const dr = parseFloat(searchParams.get('dr'));
+    const phi = parseFloat(searchParams.get('phi'));
+    if (!isNaN(r) && !isNaN(dr) && !isNaN(phi) && r > 1) {
+      this.model.r = r;
+      this.model.drOverDtau = dr;
+      this.model.phi = phi;
+      this.model.state = State.PAUSED;
+    }
+  }
+
+  writeUrlParams() {
+    const url = new URL(window.location.toString());
+    const searchParams = new URLSearchParams(url.search);
+    for (let param of this.params) {
+      param.write(searchParams);
+    }
+    if (model.state == State.PAUSED) {
+      searchParams.set('r', this.model.r);
+      searchParams.set('dr', this.model.drOverDtau);
+      searchParams.set('phi', this.model.phi);
+    } else {
+      searchParams.delete('r');
+      searchParams.delete('dr');
+      searchParams.delete('phi');
+    }
+    url.search = searchParams.toString();
+    window.history.replaceState(null, null, url.toString());
+    this.timeout = null;
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => new UrlParams(model));
+})(BlackHoleShaderDemoApp.model, BlackHoleShaderDemoApp.State);
+(function() {
+const BLOOM_FILTERS = [
+  600,
+  [[0.537425,0.0200664,0.00720805,0.0015972,0.000907317,0.000275642],
+   [0.102792,0.0185013,0.00291111,0.000519003,0.000519003,0.000519003],
+   [0.0704669,0.0181097,0.00232751,0.00232751,0.0015737,0.0015737],
+   [0.0117432,0.0117432,0.00226476,0.00154524,0.00116041,0.00116041],
+   [0.00746695,0.00746695,0.00171226,0.00104832,0.000766638,0.000766638],
+   [0.00478257,0.00478257,0.00100513,0.000818812,0.000397319,0.000397319],
+   [0.0037712,0.0037712,0.000490891,0.000490891,0.000490891,0.000490891],
+   [0.00108603,0.00108603,0.000924505,0.000924505,0.000141374,0],
+   [0.000604275,0.000604275,0.000604275,0.000604275,0.000604275,0.000604275]],
+  800,
+  [[0.368483,0.0216534,0.00816304,0.00188928,0.00108659,0.000313496],
+   [0.136249,0.0234538,0.0044714,0.000355959,0.000355959,0.000355959],
+   [0.115467,0.0273797,0.00361202,0.00361202,0.0024381,0.0024381],
+   [0.0185586,0.0185586,0.00364918,0.00244913,0.00186549,0.00186549],
+   [0.0120676,0.0120676,0.00279833,0.00169769,0.00125113,0.00125113],
+   [0.00782081,0.00782081,0.00165563,0.00133947,0.000653398,0.000653398],
+   [0.00620986,0.00620986,0.0008107,0.0008107,0.0008107,0.0008107],
+   [0.0017856,0.0017856,0.00153169,0.00153169,0.000231589,0],
+   [0.000999842,0.000999842,0.000999842,0.000999842,0.000999842,0.000999842]],
+  1000,
+  [[0.256172,0.0203539,0.00797156,0.00192098,0.00111651,0.000302983],
+   [0.153181,0.0252457,0.0056879,5.24735e-05,5.24735e-05,5.24735e-05],
+   [0.154089,0.0348566,0.00470551,0.00470551,0.00317819,0.00317819],
+   [0.0246407,0.0246407,0.00494194,0.00326092,0.00251954,0.00251954],
+   [0.0163845,0.0163845,0.00384115,0.00230972,0.00171516,0.00171516],
+   [0.010743,0.010743,0.00229079,0.00184054,0.000902617,0.000902617],
+   [0.00858938,0.00858938,0.00112463,0.00112463,0.00112463,0.00112463],
+   [0.00246603,0.00246603,0.0021316,0.0021316,0.000318642,0],
+   [0.00138965,0.00138965,0.00138965,0.00138965,0.00138965,0.00138965]],
+  1200,
+  [[0.183275,0.0181576,0.00737853,0.00184847,0.00110057,0.000302963],
+   [0.155444,0.026573,0.00631122,0,0,0],
+   [0.175386,0.0406837,0.00558637,0.00558637,0.00379343,0.00379343],
+   [0.0298822,0.0298822,0.00611926,0.00396558,0.00310871,0.00310871],
+   [0.0203221,0.0203221,0.00481554,0.00287054,0.00214781,0.00214781],
+   [0.0134794,0.0134794,0.00289524,0.00230992,0.00113896,0.00113896],
+   [0.0108519,0.0108519,0.00142504,0.00142504,0.00142504,0.00142504],
+   [0.00311065,0.00311065,0.0027096,0.0027096,0.000400401,0],
+   [0.00176416,0.00176416,0.00176416,0.00176416,0.00176416,0.00176416]],
+  1400,
+  [[0.13507,0.015829,0.00665187,0.00173139,0.00105678,0.000303016],
+   [0.150222,0.0270593,0.006541,0,0,0],
+   [0.188342,0.0450054,0.00639373,0.0062499,0.00430739,0.00430739],
+   [0.034393,0.034393,0.00718937,0.00457886,0.00363942,0.00363942],
+   [0.0239205,0.0239205,0.00572745,0.00338534,0.00255212,0.00255212],
+   [0.016048,0.016048,0.00347179,0.00275076,0.00136368,0.00136368],
+   [0.013009,0.013009,0.00171332,0.00171332,0.00171332,0.00171332],
+   [0.00372296,0.00372296,0.00326808,0.00326808,0.000477361,0],
+   [0.00212503,0.00212503,0.00212503,0.00212503,0.00212503,0.00212503]],
+  1600,
+  [[0.102246,0.013671,0.00592138,0.00159768,0.00100127,0.000299667],
+   [0.14157,0.026801,0.0065711,0,0,0],
+   [0.19617,0.0482116,0.00708177,0.0067665,0.00473425,0.00473425],
+   [0.0382986,0.0382986,0.00816852,0.00511466,0.00412131,0.00412131],
+   [0.0272343,0.0272343,0.00658764,0.00386174,0.00293299,0.00293299],
+   [0.0184784,0.0184784,0.00402643,0.00316811,0.00157908,0.00157908],
+   [0.0150825,0.0150825,0.00199223,0.00199223,0.00199223,0.00199223],
+   [0.00430923,0.00430923,0.00381212,0.00381212,0.000550361,0],
+   [0.00247558,0.00247558,0.00247558,0.00247558,0.00247558,0.00247558]],
+];
+
+// Provides a bloom shader effect by mipmapping an input image, filtering each
+// mipmap with a small kernel, and upsampling and adding the filtered images.
+
+const MAX_LEVELS = 9;
+
+const VERTEX_SHADER =
+  `#version 300 es
+  layout(location=0) in vec4 vertex;
+  void main() { gl_Position = vertex; }`;
+
+const DOWNSAMPLE_SHADER =
+  `#version 300 es
+  precision highp float;
+  const vec4 WEIGHTS = vec4(1.0, 3.0, 3.0, 1.0) / 8.0;
+  uniform sampler2D source;
+  uniform vec2 source_delta_uv;
+  layout(location=0) out vec4 frag_color;
+  void main() { 
+    vec2 ij = floor(gl_FragCoord.xy);
+    vec2 source_ij = ij * 2.0 - vec2(1.5);
+    vec2 source_uv = source_ij * source_delta_uv;
+    vec3 color = vec3(0.0);
+    for (int i = 0; i < 4; ++i) {
+      float wi = WEIGHTS[i];
+      for (int j = 0; j < 4; ++j) {
+        float wj = WEIGHTS[j];
+        vec2 delta_uv = vec2(i, j) * source_delta_uv;
+        color += wi * wj * texture(source, source_uv + delta_uv).rgb;
+      }
+    }
+    frag_color = vec4(color, 1.0);
+  }`;
+
+const BLOOM_SHADER =
+  `#version 300 es
+  precision highp float;
+  uniform sampler2D source;
+  uniform vec2 source_delta_uv;
+  uniform vec3 source_samples_uvw[SIZE];
+  layout(location=0) out vec4 frag_color;
+  void main() { 
+    vec2 source_uv = (gl_FragCoord.xy + vec2(1.0)) * source_delta_uv;
+    vec3 color = vec3(0.0);
+    for (int i = 0; i < SIZE; ++i) {
+      vec3 uvw = source_samples_uvw[i];
+      color += uvw.z * texture(source, source_uv + uvw.xy).rgb;
+    }
+    frag_color = vec4(color, 1.0);
+  }`;
+
+const UPSAMPLE_SHADER =
+  `#version 300 es
+  precision highp float;
+  const vec4 WEIGHTS[4] = vec4[4] (
+    vec4(1.0, 3.0, 3.0, 9.0) / 16.0,
+    vec4(3.0, 1.0, 9.0, 3.0) / 16.0,
+    vec4(3.0, 9.0, 1.0, 3.0) / 16.0,
+    vec4(9.0, 3.0, 3.0, 1.0) / 16.0
+  );
+  uniform sampler2D source;
+  uniform vec2 source_delta_uv;
+  layout(location=0) out vec4 frag_color;
+  void main() {
+    vec2 ij = floor(gl_FragCoord.xy);
+    vec2 source_ij = floor((ij - vec2(1.0)) * 0.5) + vec2(0.5);
+    vec2 source_uv = source_ij * source_delta_uv;
+    vec3 c0 = texture(source, source_uv).rgb;
+    vec3 c1 = texture(source, source_uv + vec2(source_delta_uv.x, 0.0)).rgb;
+    vec3 c2 = texture(source, source_uv + vec2(0.0, source_delta_uv.y)).rgb;
+    vec3 c3 = texture(source, source_uv + source_delta_uv).rgb;
+    vec4 weight = WEIGHTS[int(mod(ij.x, 2.0) + 2.0 * mod(ij.y, 2.0))];
+    vec3 color = weight.x * c0 + weight.y * c1 + weight.z * c2 + weight.w * c3;
+    frag_color = vec4(color, 1.0);
+  }`;
+
+const RENDER_SHADER =
+  `#version 300 es
+  precision highp float;
+  uniform sampler2D source;
+  uniform vec2 source_delta_uv;
+  uniform vec3 source_samples_uvw[SIZE];
+  uniform sampler2D bloom;
+  uniform vec2 bloom_delta_uv;
+  uniform float intensity;
+  uniform float exposure;
+  layout(location=0) out vec4 frag_color;
+  void main() {
+    vec2 source_uv = (gl_FragCoord.xy + vec2(1.0)) * source_delta_uv;
+    vec3 color = texture(bloom, 0.5 * gl_FragCoord.xy * bloom_delta_uv).rgb;
+    for (int i = 0; i < SIZE; ++i) {
+      vec3 uvw = source_samples_uvw[i];
+      color += uvw.z * texture(source, source_uv + uvw.xy).rgb;
+    }
+    color = mix(texture(source, source_uv).rgb, color, intensity);
+    color = <TONE_MAPPING>;
+    frag_color = vec4(color, 1.0);
+  }`;
+
+const createShader = function(gl, type, source) {
+  const shader = gl.createShader(type);
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  return shader;
+};
+
+const createTexture = function(gl, textureUnit, target) {
+  const texture = gl.createTexture();
+  gl.activeTexture(textureUnit);
+  gl.bindTexture(target, texture);
+  gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(target, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(target, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return texture;
+};
+
+// Usage: create an instance for the desired viewport size, and draw your scene
+// between a call to begin() and a call to end(). Use resize() when the viewport
+// size changes.
+class Bloom {
+
+  // 'toneMappingExpression' must be a GLSL expression, which can depend on the
+  // 'color' and 'exposure' variables, e.g "vec3(1.0) - exp(-exposure * color)".
+  constructor(gl, width, height, toneMappingExpression) {
+    this.gl = gl;
+    this.width = width;
+    this.height = height;
+    gl.getExtension('OES_texture_float_linear');
+    gl.getExtension('EXT_color_buffer_float');
+    gl.getExtension('EXT_float_blend');
+
+    this.vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER,
+       new Float32Array([-1, -1, +1, -1, -1, +1, +1, +1]), gl.STATIC_DRAW);
+
+    const vertexShader = 
+        createShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
+
+    this.downsampleProgram = gl.createProgram();
+    gl.attachShader(this.downsampleProgram, vertexShader);
+    gl.attachShader(this.downsampleProgram, 
+        createShader(gl, gl.FRAGMENT_SHADER, DOWNSAMPLE_SHADER));
+    gl.linkProgram(this.downsampleProgram);
+    gl.useProgram(this.downsampleProgram);
+    gl.uniform1i(gl.getUniformLocation(this.downsampleProgram, 'source'), 0);
+    this.downsampleProgram.sourceDeltaUvUniform = 
+        gl.getUniformLocation(this.downsampleProgram, 'source_delta_uv');
+
+    this.bloomProgram = gl.createProgram();
+    gl.attachShader(this.bloomProgram, vertexShader);
+    gl.attachShader(this.bloomProgram, 
+        createShader(gl, gl.FRAGMENT_SHADER, 
+            BLOOM_SHADER.replace(/SIZE/g, 25)));
+    gl.linkProgram(this.bloomProgram);
+    gl.useProgram(this.bloomProgram);
+    gl.uniform1i(gl.getUniformLocation(this.bloomProgram, 'source'), 0);
+    this.bloomProgram.sourceDeltaUvUniform = 
+        gl.getUniformLocation(this.bloomProgram, 'source_delta_uv');
+
+    this.upsampleProgram = gl.createProgram();
+    gl.attachShader(this.upsampleProgram, vertexShader);
+    gl.attachShader(this.upsampleProgram, 
+        createShader(gl, gl.FRAGMENT_SHADER, UPSAMPLE_SHADER));
+    gl.linkProgram(this.upsampleProgram);
+    gl.useProgram(this.upsampleProgram);
+    gl.uniform1i(gl.getUniformLocation(this.upsampleProgram, 'source'), 0);
+    this.upsampleProgram.sourceDeltaUvUniform = 
+        gl.getUniformLocation(this.upsampleProgram, 'source_delta_uv');
+
+    this.renderProgram = gl.createProgram();
+    gl.attachShader(this.renderProgram, vertexShader);
+    gl.attachShader(this.renderProgram, 
+        createShader(gl, gl.FRAGMENT_SHADER, 
+            RENDER_SHADER.replace(/SIZE/g, 25)
+                .replace('<TONE_MAPPING>', toneMappingExpression)));
+    gl.linkProgram(this.renderProgram);
+    gl.useProgram(this.renderProgram);
+    gl.uniform1i(gl.getUniformLocation(this.renderProgram, 'source'), 0);
+    gl.uniform1i(gl.getUniformLocation(this.renderProgram, 'bloom'), 1);
+    this.renderProgram.intensityUniform = 
+        gl.getUniformLocation(this.renderProgram, 'intensity');
+    this.renderProgram.exposureUniform = 
+        gl.getUniformLocation(this.renderProgram, 'exposure');
+    this.renderProgram.sourceDeltaUvUniform = 
+        gl.getUniformLocation(this.renderProgram, 'source_delta_uv');
+    this.renderProgram.bloomDeltaUvUniform = 
+        gl.getUniformLocation(this.renderProgram, 'bloom_delta_uv'); 
+
+    this.numLevels = 0;
+    this.mipmapTextures = [];
+    this.filterTextures = [];
+    this.bloomFilters = [];
+    for (let i = 0; i < MAX_LEVELS; ++i) {
+      const mipmapTexture = createTexture(gl, gl.TEXTURE0, gl.TEXTURE_2D);
+      this.mipmapTextures.push(mipmapTexture);
+      if (i > 0) {
+        const filterTexture = createTexture(gl, gl.TEXTURE0, gl.TEXTURE_2D);
+        if (i == 1) {
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        }
+        this.filterTextures.push(filterTexture);
+      } else {
+        this.filterTextures.push(null);
+      }
+    }
+    this.resize(width, height);
+
+    this.mipmapFbos = [];
+    this.filterFbos = [];
+    for (let i = 0; i < MAX_LEVELS; ++i) {
+      const mipmapFbo = gl.createFramebuffer();
+      this.mipmapFbos.push(mipmapFbo);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, mipmapFbo);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
+          gl.TEXTURE_2D, this.mipmapTextures[i], 0);
+      if (i > 0) {
+        const filterFbo = gl.createFramebuffer();
+        this.filterFbos.push(filterFbo);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, filterFbo);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
+            gl.TEXTURE_2D, this.filterTextures[i], 0);
+      } else {
+        this.filterFbos.push(null);
+      }
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+
+  resize(width, height) {
+    this.width = width;
+    this.height = height;
+
+    const gl = this.gl;
+    gl.activeTexture(gl.TEXTURE0);
+    let level = 0;
+    let w = width;
+    let h = height;
+    while (h > 2 && level < MAX_LEVELS) {
+      gl.bindTexture(gl.TEXTURE_2D, this.mipmapTextures[level]);
+      gl.texImage2D(
+          gl.TEXTURE_2D, 0, gl.RGBA16F, w + 2, h + 2, 0, gl.RGBA, gl.FLOAT, 
+          null);
+      this.mipmapTextures[level].width = w + 2;
+      this.mipmapTextures[level].height = h + 2;
+      if (level > 0) {
+        gl.bindTexture(gl.TEXTURE_2D, this.filterTextures[level]);
+        gl.texImage2D(
+           gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.FLOAT, null);
+        this.filterTextures[level].width = w;
+        this.filterTextures[level].height = h;
+      }
+      level += 1;
+      w = Math.ceil(w / 2);
+      h = Math.ceil(h / 2);
+    }
+    this.numLevels = level;
+
+    let nearest_size_index = 0;
+    let nearest_size = BLOOM_FILTERS[nearest_size_index];
+    for (let i = 2; i < BLOOM_FILTERS.length; i += 2) {
+      const size = BLOOM_FILTERS[i]
+      if (Math.abs(BLOOM_FILTERS[i] - height) < 
+          Math.abs(nearest_size - height)) {
+        nearest_size_index = i;
+        nearest_size = BLOOM_FILTERS[i];
+      }
+    }
+
+    const filters = BLOOM_FILTERS[nearest_size_index + 1];
+    for (let i = 0; i < this.numLevels; ++i) {
+      const bloomFilter = [];
+      const width = this.mipmapTextures[i].width;
+      const height = this.mipmapTextures[i].height;
+      for (let y = -2; y <= 2; ++y) {
+        const iy = Math.abs(y);
+        for (let x = -2; x <= 2; ++x) {
+          const ix = Math.abs(x);
+          const index = 
+              ix < iy ? (iy * (iy + 1)) / 2 + ix : (ix * (ix + 1)) / 2 + iy;
+          const w = filters[i][index];
+          bloomFilter.push([x / width, y / height, w]);
+        }
+      }
+      this.bloomFilters.push(bloomFilter);
+    }
+  }
+
+  begin() {
+    const gl = this.gl;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.mipmapFbos[0]);
+    gl.viewport(1, 1, this.mipmapTextures[0].width - 2, 
+        this.mipmapTextures[0].height - 2);
+  }
+
+  end(intensity, exposure) {
+    const gl = this.gl;
+    gl.activeTexture(gl.TEXTURE0);
+
+    let program = this.downsampleProgram;
+    gl.useProgram(program);
+    for (let level = 1; level < this.numLevels; ++level) {
+      const targetTexture = this.mipmapTextures[level];
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.mipmapFbos[level]);
+      gl.viewport(1, 1, targetTexture.width - 2, targetTexture.height - 2);
+      gl.bindTexture(gl.TEXTURE_2D, this.mipmapTextures[level - 1]);
+      gl.uniform2f(program.sourceDeltaUvUniform, 
+          1.0 / this.mipmapTextures[level - 1].width,
+          1.0 / this.mipmapTextures[level - 1].height);
+      this.drawQuad(program);
+    }
+
+    program = this.bloomProgram;
+    gl.useProgram(program);
+    for (let level = 1; level < this.numLevels; ++level) {
+      const targetTexture = this.filterTextures[level];
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.filterFbos[level]);
+      gl.viewport(0, 0, targetTexture.width, targetTexture.height);
+      gl.bindTexture(gl.TEXTURE_2D, this.mipmapTextures[level]);
+      gl.uniform2f(program.sourceDeltaUvUniform, 
+          1.0 / this.mipmapTextures[level].width,
+          1.0 / this.mipmapTextures[level].height);
+      for (let i = 0; i < 25; ++i) {
+        gl.uniform3f(gl.getUniformLocation(program, `source_samples_uvw[${i}]`),
+            this.bloomFilters[level][i][0],
+            this.bloomFilters[level][i][1], 
+            this.bloomFilters[level][i][2]);
+      }
+      this.drawQuad(program);
+    }
+
+    program = this.upsampleProgram;
+    gl.activeTexture(gl.TEXTURE0);
+    gl.enable(gl.BLEND);
+    gl.blendEquation(gl.FUNC_ADD);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    gl.useProgram(program);
+    for (let level = this.numLevels - 2; level >= 1; --level) {
+      const targetTexture = this.filterTextures[level];
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.filterFbos[level]);
+      gl.viewport(0, 0, targetTexture.width, targetTexture.height);
+      gl.bindTexture(gl.TEXTURE_2D, this.filterTextures[level + 1]);
+      gl.uniform2f(program.sourceDeltaUvUniform, 
+          1.0 / this.filterTextures[level + 1].width,
+          1.0 / this.filterTextures[level + 1].height);
+      this.drawQuad(program);
+    }
+    gl.disable(gl.BLEND);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, this.width, this.height);
+
+    program = this.renderProgram;
+    gl.useProgram(program);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.mipmapTextures[0]);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.filterTextures[1]);
+    gl.uniform2f(program.sourceDeltaUvUniform, 
+        1.0 / this.mipmapTextures[0].width, 
+        1.0 / this.mipmapTextures[0].height);
+    gl.uniform2f(program.bloomDeltaUvUniform, 
+        1.0 / this.filterTextures[1].width,
+        1.0 / this.filterTextures[1].height);
+    if (this.numLevels > 0) {
+      for (let i = 0; i < 25; ++i) {
+        gl.uniform3f(gl.getUniformLocation(program, `source_samples_uvw[${i}]`),
+            this.bloomFilters[0][i][0],
+            this.bloomFilters[0][i][1], 
+            this.bloomFilters[0][i][2]);
+      }
+    }
+    gl.uniform1f(program.intensityUniform, intensity);
+    gl.uniform1f(program.exposureUniform, exposure);
+    this.drawQuad(program);
+  }
+
+  drawQuad(program) {
+    const gl = this.gl;
+    const vertexAttrib = gl.getAttribLocation(program, 'vertex');
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+    gl.vertexAttribPointer(
+        vertexAttrib,
+        /*numComponents=*/ 2,
+        /*type=*/ this.gl.FLOAT,
+        /*normalize=*/ false,
+        /*stride=*/ 0,
+        /*offset=*/ 0);
+    gl.enableVertexAttribArray(vertexAttrib);
+    gl.drawArrays(gl.TRIANGLE_STRIP, /*offset=*/ 0, /*vertexCount=*/ 4);
+  }
+}
+BlackHoleShaderDemoApp.Bloom = Bloom;
+})();
+
+(function() {
+
+const cubeMapTargets = function(gl) {
+  return [
+      gl.TEXTURE_CUBE_MAP_POSITIVE_X,
+      gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
+      gl.TEXTURE_CUBE_MAP_POSITIVE_Y,
+      gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
+      gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
+      gl.TEXTURE_CUBE_MAP_NEGATIVE_Z];
+};
+
+const createTexture = function(gl, target) {
+  const texture = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(target, texture);
+  gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(target, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(target, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return texture;
+};
+
+const loadTextureData = function(textureDataUrl, callback) {
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', textureDataUrl);
+  xhr.responseType = 'arraybuffer';
+  xhr.onload = (event) => {
+    const data = new DataView(xhr.response);
+    const array =
+        new Float32Array(data.byteLength / Float32Array.BYTES_PER_ELEMENT);
+    for (let i = 0; i < array.length; ++i) {
+      array[i] = data.getFloat32(i * Float32Array.BYTES_PER_ELEMENT, true);
+    }
+    callback(array);
+  };
+  xhr.send();
+};
+
+const loadIntTextureData = function(textureDataUrl, callback) {
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', textureDataUrl);
+  xhr.responseType = 'arraybuffer';
+  xhr.onload = (event) => {
+    const data = new DataView(xhr.response);
+    const array =
+        new Uint32Array(data.byteLength / Uint32Array.BYTES_PER_ELEMENT);
+    for (let i = 0; i < array.length; ++i) {
+      array[i] = data.getUint32(i * Uint32Array.BYTES_PER_ELEMENT, true);
+    }
+    callback(array);
+  };
+  xhr.send();
+};
+
+class TextureManager {
+  constructor(rootElement, gl) {
+    this.loadingPanel = rootElement.querySelector('#cv_loading_panel');
+    this.loadingBar = rootElement.querySelector('#cv_loading_bar');
+    this.gl = gl;
+
+    this.rayDeflectionTexture = null;
+    this.rayInverseRadiusTexture = null;
+    this.blackbodyTexture = null;
+    this.dopplerTexture = null;
+    this.gridTexture = null;
+
+    this.galaxyTexture = null;
+    this.starTexture = null;
+    this.starTexture2 = null;
+    this.tilesQueue = [];
+    this.numTilesLoaded = 0;
+    this.numTilesLoadedPerLevel = [0, 0, 0, 0, 0];
+    this.numPendingRequests = 0;
+
+    const ext = gl.getExtension('EXT_texture_filter_anisotropic');
+    this.loadTextures(ext);
+    this.loadStarTextures(ext);
+
+    document.body.addEventListener('keypress', (e) => this.onKeyPress(e)); 
+  }
+
+  loadTextures(ext) {
+    const gl = this.gl;
+
+    loadTextureData('deflection.dat', (data) => {
+      this.rayDeflectionTexture = createTexture(gl, gl.TEXTURE_2D);
+      this.rayDeflectionTexture.width = data[0];
+      this.rayDeflectionTexture.height = data[1];
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG32F, data[0], data[1], 0, 
+                    gl.RG, gl.FLOAT, data.slice(2));
+    });
+
+    loadTextureData('inverse_radius.dat', (data) => {
+      this.rayInverseRadiusTexture = createTexture(gl, gl.TEXTURE_2D);
+      this.rayInverseRadiusTexture.width = data[0];
+      this.rayInverseRadiusTexture.height = data[1];
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG32F, data[0], data[1], 0,
+                    gl.RG, gl.FLOAT, data.slice(2));
+    });
+
+    this.dopplerTexture = createTexture(gl, gl.TEXTURE_3D);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+    loadTextureData('doppler.dat', (data) => {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_3D, this.dopplerTexture);
+      gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGB32F, 64, 32, 64, 0, 
+                    gl.RGB, gl.FLOAT, data);
+    });
+
+    this.blackbodyTexture = createTexture(gl, gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    loadTextureData('black_body.dat', (data) => {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.blackbodyTexture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB32F, 128, 1, 0,
+                    gl.RGB, gl.FLOAT, data);
+    });
+
+    this.gridTexture = createTexture(gl, gl.TEXTURE_CUBE_MAP);
+    gl.texStorage2D(gl.TEXTURE_CUBE_MAP, 10, gl.R8, 512, 512);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, 
+                     gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);   
+    gl.texParameterf(gl.TEXTURE_CUBE_MAP, ext.TEXTURE_MAX_ANISOTROPY_EXT, 
+                     gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT));
+    const gridData = new Uint8Array(512 * 512);
+    for (let j = 0; j < 512; ++j) {
+      const jmod = (j + 2) % 32;
+      for (let i = 0; i < 512; ++i) {
+        const imod = (i + 2) % 32;
+        gridData[i + j * 512] = (imod < 4 || jmod < 4) ? 255 : 0;
+      }
+    }
+    for (let target of cubeMapTargets(gl)) {
+      gl.texSubImage2D(target, 0, 0, 0, 512, 512, 
+                       gl.RED, gl.UNSIGNED_BYTE, gridData, 0);
+    }
+    gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+  }
+
+  loadStarTextures(glExt) {
+    const gl = this.gl;
+
+    this.galaxyTexture = createTexture(gl, gl.TEXTURE_CUBE_MAP);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.galaxyTexture);
+    gl.texStorage2D(gl.TEXTURE_CUBE_MAP, 12, gl.RGB9_E5, 2048, 2048);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER,
+                     gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);   
+    gl.texParameterf(gl.TEXTURE_CUBE_MAP, glExt.TEXTURE_MAX_ANISOTROPY_EXT, 
+                     gl.getParameter(glExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT));
+
+    this.starTexture = createTexture(gl, gl.TEXTURE_CUBE_MAP);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.starTexture);
+    gl.texStorage2D(gl.TEXTURE_CUBE_MAP, 5, gl.RGB9_E5, 2048, 2048);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, 
+                     gl.NEAREST_MIPMAP_NEAREST);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAX_LOD, 4);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAX_LEVEL, 4);
+
+    this.starTexture2 = createTexture(gl, gl.TEXTURE_CUBE_MAP);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.starTexture2);
+    gl.texStorage2D(gl.TEXTURE_CUBE_MAP, 7, gl.RGB9_E5, 64, 64);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, 
+                     gl.NEAREST_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameterf(gl.TEXTURE_CUBE_MAP, glExt.TEXTURE_MAX_ANISOTROPY_EXT, 
+                     gl.getParameter(glExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT));
+
+    const base = '../../gaia_sky_map';
+    const prefixes = ['pos-x', 'neg-x', 'pos-y', 'neg-y', 'pos-z', 'neg-z'];
+    const targets = cubeMapTargets(gl);
+    for (let l = 0; l <= 4; ++l) {
+      for (let i = 0; i < 6; ++i) {
+        const size = 2048 / (1 << l);
+        const tileSize = Math.min(256, size);
+        const numTiles = size / tileSize;
+        for (let tj = 0; tj < numTiles; ++tj) {
+          for (let ti = 0; ti < numTiles; ++ti) {
+            const target = targets[i];
+            const url = `${base}/${prefixes[i]}-${l}-${ti}-${tj}.dat`;
+            this.tilesQueue.push({l, ti, tj, i, target, url});
+          }
+        }
+      }
+    }
+    this.updateLoadingBar();
+    this.loadStarTextureTiles();
+  }
+
+  loadStarTextureTiles() {
+    while (this.tilesQueue.length > 0 && this.numPendingRequests < 6) {
+      const tile = this.tilesQueue.pop();
+      this.loadStarTextureTile(
+          tile.l, tile.ti, tile.tj, tile.i, tile.target, tile.url);
+    }
+  }
+
+  loadStarTextureTile(l, ti, tj, i, target, url) {
+    const gl = this.gl;
+    const size = 2048 / (1 << l);
+    loadIntTextureData(url, (data) => {
+      gl.activeTexture(gl.TEXTURE0);
+      let start = 0;
+      let level = l;
+      let tileSize = Math.min(256, size);
+      while (start < data.length) {
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.galaxyTexture);
+        gl.texSubImage2D(target, level, ti * tileSize, tj * tileSize, 
+            tileSize, tileSize, gl.RGB, gl.UNSIGNED_INT_5_9_9_9_REV, 
+            data.subarray(start, start + tileSize * tileSize), 0);
+        start += tileSize * tileSize;
+        if (level <= 4) {
+          gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.starTexture);
+          gl.texSubImage2D(target, level, ti * tileSize, tj * tileSize, 
+              tileSize, tileSize, gl.RGB, gl.UNSIGNED_INT_5_9_9_9_REV,
+              data.subarray(start, start + tileSize * tileSize), 0);
+        } else {
+          gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.starTexture2);
+          gl.texSubImage2D(target, level - 5, ti * tileSize, tj * tileSize, 
+              tileSize, tileSize, gl.RGB, gl.UNSIGNED_INT_5_9_9_9_REV, 
+              data.subarray(start, start + tileSize * tileSize), 0);
+        }
+        start += tileSize * tileSize;
+        level += 1;
+        tileSize /= 2;
+      }
+      this.numTilesLoaded += 1;
+      if (l <= 4) {
+        this.numTilesLoadedPerLevel[l] += 1;
+      }
+      this.numPendingRequests -= 1;
+      this.updateLoadingBar();
+      this.loadStarTextureTiles();
+    });
+    this.numPendingRequests += 1;
+  }
+
+  updateLoadingBar() {
+    this.loadingBar.style.width = `${this.numTilesLoaded / 516 * 100}%`;
+    if (this.numTilesLoaded == 516) {
+      this.loadingPanel.classList.toggle('cv-loaded');
+    }
+  } 
+
+  getMinLoadedStarTextureLod() {
+    if (this.numTilesLoadedPerLevel[0] == 384) {
+      return 0;
+    } else if (this.numTilesLoadedPerLevel[1] == 96) {
+      return 1;
+    } else if (this.numTilesLoadedPerLevel[2] == 24) {
+      return 2;
+    } else if (this.numTilesLoadedPerLevel[3] == 6) {
+      return 3;
+    }
+    return 4;
+  }
+
+  onKeyPress(event) {
+    if (event.key == ' ') {
+      this.loadingPanel.classList.toggle('cv-hidden');
+    }
+  }
+}
+
+BlackHoleShaderDemoApp.TextureManager = TextureManager;
+})();
+
+(function() {
+
+const generateDiscParticleParams = function() {
+  const rMin = 3.0;
+  const rMax = 12.0;
+  const computeDthetaDphi = function(u1, u2, u3) {
+    const k2 = (u2 - u1) / (u3 - u1);
+    const N = 100000;
+    let K = 0.0;
+    for (let i = 0; i < N; ++i) {
+      const dy = 1.0 / N;
+      const y = (i + 0.5) / N;
+      K += dy / Math.sqrt((1 - y * y) * (1 - k2 * y * y));
+    }
+    return Math.PI * Math.sqrt(u3 - u1) / (4 * K);
+  };
+
+  let ringParams = '';
+  let numRings = 0;
+  for (let r1 = rMin; r1 < rMax; r1 += 0.2) {
+    const e = 0.3 * Math.random();
+    const r2 = r1 * (1.0 + e) / (1.0 - e);
+    const u1 = 1 / r2;
+    const u2 = 1 / r1;
+    const u3 = 1 - u1 - u2;
+    const phi0 = 2 * Math.PI * Math.random();
+    const dThetaDphi = computeDthetaDphi(u1, u2, u3);
+
+    const x = u1.toPrecision(3);
+    const y = u2.toPrecision(3);
+    const z = phi0.toPrecision(3);
+    const w = dThetaDphi.toPrecision(3);
+    ringParams += `${numRings == 0 ? '' : ',\n'}vec4(${x}, ${y}, ${z}, ${w})`;
+    numRings += 1;
+  }
+
+  return `
+      const float INNER_DISC_R = ${rMin.toPrecision(3)};
+      const float OUTER_DISC_R = ${rMax.toPrecision(3)};
+      const int NUM_DISC_PARTICLES = ${numRings};
+      const vec4 DISC_PARTICLE_PARAMS[${numRings}] = vec4[${numRings}] (
+        ${ringParams}
+      );`;
+}
+
+const createShader = function(gl, type, source) {
+  const shader = gl.createShader(type);
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  return shader;
+};
+
+class ShaderManager {
+  constructor(model, textureManager, gl) {
+    this.model = model;
+    this.textureManager = textureManager;
+    this.gl = gl;
+
+    this.programs = {};
+    this.program = null;
+  }
+
+  getProgram() {
+    const options =
+        `#define LENSING ${this.model.lensing.getValue() ? 1 : 0}
+        #define DOPPLER ${this.model.doppler.getValue() ? 1 : 0}
+        #define GRID ${this.model.grid.getValue() ? 1 : 0}
+        #define STARS ${this.model.stars.getValue() ? 1 : 0}`;
+    this.program = this.programs[options];
+    if (this.program ||
+        !this.textureManager.rayDeflectionTexture ||
+        !this.textureManager.rayInverseRadiusTexture) {
+      return this.program;
+    }
+
+    const header = 
+        `#version 300 es
+        precision highp float;
+        #define IN(x) const in x
+        #define OUT(x) out x
+        ${options}
+        const float pi = ${Math.PI};
+        const float rad = 1.0;
+        const int RAY_DEFLECTION_TEXTURE_WIDTH = 
+            ${this.textureManager.rayDeflectionTexture.width};
+        const int RAY_DEFLECTION_TEXTURE_HEIGHT =
+            ${this.textureManager.rayDeflectionTexture.height};
+        const int RAY_INVERSE_RADIUS_TEXTURE_WIDTH = 
+            ${this.textureManager.rayInverseRadiusTexture.width};
+        const int RAY_INVERSE_RADIUS_TEXTURE_HEIGHT = 
+            ${this.textureManager.rayInverseRadiusTexture.height};
+        const float STARS_CUBE_MAP_SIZE = 
+            ${this.model.grid.getValue() ? 128 : 2048}.0;
+        const float MAX_FOOTPRINT_SIZE = 16.0;
+        const float MAX_FOOTPRINT_LOD =
+            ${this.model.grid.getValue() ? 0 : 4}.0;\n`;
+
+    const gl = this.gl;
+    const vertexShader = createShader(
+        gl, 
+        gl.VERTEX_SHADER,
+        `${header}
+        #define VERTEX_SHADER
+        ${document.querySelector("#black_hole_shader").innerHTML}
+        ${document.querySelector("#vertex_shader").innerHTML}`);
+
+    const fragmentShader = createShader(
+        gl,
+        gl.FRAGMENT_SHADER,
+        `${header}
+        ${generateDiscParticleParams()} 
+        ${document.querySelector("#black_hole_shader").innerHTML}
+        ${document.querySelector("#fragment_shader").innerHTML}`);
+
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    
+    program.vertexAttrib = gl.getAttribLocation(program, 'vertex');
+    program.cameraPosition =
+        gl.getUniformLocation(program, 'camera_position');
+    program.cameraOrientation =
+        gl.getUniformLocation(program, 'camera_orientation');
+    program.cameraSize =
+        gl.getUniformLocation(program, 'camera_size');
+    program.rayDeflectionTexture = 
+        gl.getUniformLocation(program, 'ray_deflection_texture');
+    program.rayInverseRadiusTexture = 
+        gl.getUniformLocation(program, 'ray_inverse_radius_texture');
+    program.galaxyCubeTexture = 
+        gl.getUniformLocation(program, 'galaxy_cube_texture');
+    program.starCubeTexture = 
+        gl.getUniformLocation(program, 'star_cube_texture');
+    program.starCubeTexture2 = 
+        gl.getUniformLocation(program, 'star_cube_texture2');
+    program.starsOrientation =
+        gl.getUniformLocation(program, 'stars_orientation');
+    program.minStarsLod = 
+        gl.getUniformLocation(program, 'min_stars_lod');
+    program.blackBodyTexture = 
+        gl.getUniformLocation(program, 'black_body_texture');
+    program.dopplerTexture =
+        gl.getUniformLocation(program, 'doppler_texture');
+    program.discParams =
+        gl.getUniformLocation(program, 'disc_params');
+
+    this.programs[options] = program;
+    this.program = program;
+    return program;
+  }
+}
+
+BlackHoleShaderDemoApp.ShaderManager = ShaderManager;
+})();
+
+(function(model, Bloom, TextureManager, ShaderManager) {
+
+const createQuadVertexBuffer = function(gl) {
+  const vertexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER,
+       new Float32Array([-1, -1, +1, -1, -1, +1, +1, +1]), gl.STATIC_DRAW);
+  return vertexBuffer;
+};
+
+class CameraView {
+  constructor(model, rootElement) {
+    this.model = model;
+    this.rootElement = rootElement;
+    this.canvas = rootElement.querySelector('#camera_view');
+    this.canvas.style.width = `${rootElement.clientWidth}px`;
+    this.canvas.style.height = `${rootElement.clientHeight}px`;
+    this.canvas.width = rootElement.clientWidth * window.devicePixelRatio;
+    this.canvas.height = rootElement.clientHeight * window.devicePixelRatio;
+    this.errorPanel = rootElement.querySelector('#cv_error_panel');
+    this.errorPanelShown = false;
+
+    this.gl = this.canvas.getContext('webgl2');
+    if (!this.initGl()) {
+      return;
+    }
+
+    this.vertexBuffer = createQuadVertexBuffer(this.gl);
+    this.textureManager = new TextureManager(rootElement, this.gl);
+    this.shaderManager = new ShaderManager(model, this.textureManager, this.gl);
+    this.bloom = new Bloom(this.gl, this.canvas.width, this.canvas.height,
+        'pow(vec3(1.0) - exp(-exposure * color), vec3(1.0 / 2.2))');
+
+    this.lastTauSeconds = Date.now() / 1000.0;
+    this.lastFrameTime = undefined;
+    this.numFrames = 0;
+
+    this.drag = false;
+    this.previousMouseX = undefined;
+    this.previousMouseY = undefined;
+    this.hidden = false;
+
+    window.addEventListener('mousedown', (e) => this.onMouseDown(e));
+    window.addEventListener('mousemove', (e) => this.onMouseMove(e));
+    window.addEventListener('mouseup', (e) => this.onMouseUp(e));
+    window.addEventListener('resize', (e) => this.onResize(e));
+    document.addEventListener('visibilitychange', (e) => {
+      this.hidden = document.hidden;
+      if (!this.hidden) {
+        this.frameTime = undefined;
+        this.onRender();
+      }
+    });
+
+    requestAnimationFrame(() => this.onRender());
+  }
+
+  initGl() {
+    if (!this.gl ||
+        !this.gl.getExtension('OES_texture_float_linear') ||
+        !this.gl.getExtension('EXT_texture_filter_anisotropic') ||
+        !this.gl.getExtension('EXT_color_buffer_float') ||
+        !this.gl.getExtension('EXT_float_blend')) {
+      this.errorPanel.innerHTML = 'Unfortunately your browser doesn\'t ' + 
+          'support WebGL 2 or the WebGL 2 extensions required for this demo.';
+      this.errorPanel.classList.toggle('cv-hidden');
+      return false;
+    }
+    this.errorPanel.addEventListener('click', () => {
+      this.errorPanel.classList.toggle('cv-hidden');
+    });
+    return true;
+  }
+
+  onRender() {
+    if (this.hidden) {
+      return;
+    }
+    const program = this.shaderManager.getProgram();
+    if (!program) {
+      requestAnimationFrame(() => this.onRender());
+      return;
+    }
+
+    const kFovY = 50 / 180 * Math.PI;
+    const kTanFovY = Math.tan(kFovY / 2);
+    const aspectRatio = this.canvas.width / this.canvas.height;
+    const focalLength = this.canvas.height / (2 * kTanFovY);
+
+    const gl = this.gl; 
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.textureManager.rayDeflectionTexture);      
+
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.textureManager.rayInverseRadiusTexture);
+
+    gl.activeTexture(gl.TEXTURE2);
+    if (this.model.grid.getValue()) {
+      gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureManager.gridTexture);
+    } else {
+      gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureManager.galaxyTexture);
+    }
+    const minLod = this.textureManager.getMinLoadedStarTextureLod();
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_LOD, minLod);
+
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureManager.starTexture);
+
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureManager.starTexture2);
+
+    gl.activeTexture(gl.TEXTURE5);
+    gl.bindTexture(gl.TEXTURE_2D, this.textureManager.blackbodyTexture);
+
+    gl.activeTexture(gl.TEXTURE6);
+    gl.bindTexture(gl.TEXTURE_3D, this.textureManager.dopplerTexture);
+
+    gl.useProgram(program);
+    gl.uniform4f(program.cameraPosition, 
+        this.model.t, this.model.r, this.model.worldTheta, this.model.worldPhi);
+    // Transpose matrix since GLSL requires column major order:
+    const lorentz = this.model.lorentz;
+    gl.uniformMatrix4fv(program.cameraOrientation, false,
+        [lorentz[0][0], lorentz[1][0], lorentz[2][0], lorentz[3][0],
+         lorentz[0][1], lorentz[1][1], lorentz[2][1], lorentz[3][1],
+         lorentz[0][2], lorentz[1][2], lorentz[2][2], lorentz[3][2],
+         lorentz[0][3], lorentz[1][3], lorentz[2][3], lorentz[3][3]]);
+    gl.uniform3f(program.cameraSize, 
+        this.canvas.width / 2, this.canvas.height / 2, focalLength);
+    gl.uniform1i(program.rayDeflectionTexture, 0);
+    gl.uniform1i(program.rayInverseRadiusTexture, 1); 
+    gl.uniform1i(program.galaxyCubeTexture, 2);
+    gl.uniform1i(program.starCubeTexture, 3);
+    gl.uniform1i(program.starCubeTexture2, 4);
+    gl.uniformMatrix3fv(program.starsOrientation, false, 
+        this.model.starsMatrix);
+    gl.uniform1f(program.minStarsLod, minLod);
+    gl.uniform1i(program.blackBodyTexture, 5);
+    gl.uniform1i(program.dopplerTexture, 6);
+    gl.uniform3f(program.discParams, 
+        this.model.discDensity.getValue(),
+        this.model.discOpacity.getValue(), 
+        this.model.discTemperature.getValue());
+
+    this.bloom.begin();
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+    gl.vertexAttribPointer(program.vertexAttrib, 2, this.gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(program.vertexAttrib);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    this.bloom.end(this.model.bloom.getValue(), this.model.exposure.getValue());
+
+    const tauSeconds = Date.now() / 1000.0;
+    const dTauSeconds = tauSeconds - this.lastTauSeconds;
+    this.lastTauSeconds = tauSeconds;
+    this.model.updateOrbit(dTauSeconds);
+
+    requestAnimationFrame(() => this.onRender());
+    this.checkFrameRate();
+  }
+
+  checkFrameRate() {
+    this.numFrames += 1;
+    const time = Date.now();
+    if (!this.lastFrameTime) {
+      this.lastFrameTime = time;
+      this.numFrames = 0;
+    }
+    if (time > this.lastFrameTime + 1000) {
+      if (this.numFrames <= 10 && this.model.stars.getValue() && 
+          !this.errorPanelShown) {
+        this.model.stars.setValue(false);
+        this.errorPanel.innerHTML = 'Stars have been automatically disabled ' +
+            'to improve performance. You can re-enable them from the left ' +
+            'hand side panel.';
+        this.errorPanel.classList.toggle('cv-hidden');
+        this.errorPanel.classList.toggle('cv-warning');
+        this.errorPanelShown = true;
+      }
+      this.lastFrameTime = time;
+      this.numFrames = 0;
+    }
+  }
+
+  onMouseDown(event) {
+    this.previousMouseX = event.screenX;
+    this.previousMouseY = event.screenY;
+    this.drag = (event.target.tagName != 'INPUT') && !event.ctrlKey;
+  }
+
+  onMouseMove(event) {
+    const mouseX = event.screenX;
+    const mouseY = event.screenY;
+    if (this.drag) {
+      const kScale = 500;
+      let yaw = this.model.cameraYaw.getValue();
+      let pitch = this.model.cameraPitch.getValue();
+      yaw += (this.previousMouseX - mouseX) / kScale;
+      pitch -= (this.previousMouseY - mouseY) / kScale;
+      this.model.cameraYaw.setValue(
+          yaw - 2 * Math.PI * Math.floor(yaw / (2 * Math.PI)));
+      this.model.cameraPitch.setValue(pitch);
+    }
+    this.previousMouseX = mouseX;
+    this.previousMouseY = mouseY;
+  }
+
+  onMouseUp(event) {
+    this.drag = false;
+  }
+
+  onResize(event) {
+    const rootElement = this.rootElement;
+    this.canvas.style.width = `${rootElement.clientWidth}px`;
+    this.canvas.style.height = `${rootElement.clientHeight}px`;
+    this.canvas.width = rootElement.clientWidth * window.devicePixelRatio;
+    this.canvas.height = rootElement.clientHeight * window.devicePixelRatio;
+    this.bloom.resize(this.canvas.width, this.canvas.height);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  new CameraView(model, document.body);
+});
+})(BlackHoleShaderDemoApp.model,
+    BlackHoleShaderDemoApp.Bloom,
+    BlackHoleShaderDemoApp.TextureManager,
+    BlackHoleShaderDemoApp.ShaderManager);
+
+(function(model) {
+
+class Context3d {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.context = canvas.getContext('2d');
+
+    const r = 120;
+    const theta = 70 * Math.PI / 180;
+    const phi = -135 * Math.PI / 180;
+    const fovY = 30 * Math.PI / 180;
+
+    this.ex = [-Math.sin(phi), Math.cos(phi), 0];
+    this.ey = [-Math.cos(theta) * Math.cos(phi),
+               -Math.cos(theta) * Math.sin(phi),
+                Math.sin(theta)];
+    this.ez = [Math.sin(theta) * Math.cos(phi),
+               Math.sin(theta) * Math.sin(phi),
+               Math.cos(theta)];
+    this.camera = [r * this.ez[0], r * this.ez[1], r * this.ez[2]];
+
+    this.width = canvas.width;
+    this.height = canvas.height;
+    this.focal = this.height / (2 * Math.tan(fovY / 2));
+    this.nearPlane = -0.1;
+    this.lastCameraPt = [];
+  }
+
+  moveTo(x, y, z) {
+    this.pathTo(x, y, z, true);
+  }
+
+  lineTo(x, y, z) {
+    this.pathTo(x, y, z, false);
+  }
+
+  pathTo(x, y, z, move) {
+    const cameraPt = this.toCameraPt([x, y, z]);
+    const screenPt = this.toScreenPt(cameraPt);
+    if (move) {
+      this.context.moveTo(screenPt[0], screenPt[1]);
+    } else {
+      if (cameraPt[2] < this.nearPlane) {
+        if (this.lastCameraPt[2] > this.nearPlane) {
+          this.clipTo(cameraPt, true);
+        }
+        this.context.lineTo(screenPt[0], screenPt[1]);
+      } else if (this.lastCameraPt[2] < this.nearPlane) {
+        this.clipTo(cameraPt, false);
+      }
+    }
+    this.lastCameraPt = cameraPt;
+  }
+
+  clipTo(cameraPt, move) {
+    const t = (this.nearPlane - this.lastCameraPt[2]) / 
+        (cameraPt[2] - this.lastCameraPt[2]);
+    const nearPlanePt = [
+        this.lastCameraPt[0] + t * (cameraPt[0] - this.lastCameraPt[0]),
+        this.lastCameraPt[1] + t * (cameraPt[1] - this.lastCameraPt[1]),
+        this.nearPlane];
+    const screenPt = this.toScreenPt(nearPlanePt);
+    if (move) {
+      this.context.moveTo(screenPt[0], screenPt[1]);
+    } else {
+      this.context.lineTo(screenPt[0], screenPt[1]);
+    }
+  }
+
+  toCameraPt(worldPt) {
+    const q = [worldPt[0] - this.camera[0],
+               worldPt[1] - this.camera[1],
+               worldPt[2] - this.camera[2]];
+    return [q[0] * this.ex[0] + q[1] * this.ex[1] + q[2] * this.ex[2],
+            q[0] * this.ey[0] + q[1] * this.ey[1] + q[2] * this.ey[2],
+            q[0] * this.ez[0] + q[1] * this.ez[1] + q[2] * this.ez[2]];
+  }
+
+  toScreenPt(cameraPt) {
+    return [this.width * 0.5 - 0.5 * this.focal * cameraPt[0] / cameraPt[2],
+            this.height * 0.5 + 0.5 * this.focal * cameraPt[1] / cameraPt[2]];
+  }
+}
+
+const safeSqrt = function(x) {
+  return Math.sqrt(Math.max(x, 0));
+};
+
+class OrbitPanel {
+  constructor(rootElement, model) {
+    this.rootElement = rootElement;   
+    this.model = model;
+    this.model.addListener(this);
+
+    this.blackHoleRadius = rootElement.querySelector('#op_black_hole_radius');
+    this.radius = rootElement.querySelector('#op_radius');
+    this.speed = rootElement.querySelector('#op_speed');
+    this.localTime = rootElement.querySelector('#op_local_time');
+    this.globalTime = rootElement.querySelector('#op_global_time');
+    this.timeDilation = rootElement.querySelector('#op_time_dilation');
+    this.dot = rootElement.querySelector('#op_dot');
+    this.numberFormat = 
+        new Intl.NumberFormat('en-US', {maximumFractionDigits : 1});
+
+    this.lastStartRadius = undefined;
+    this.lastStartDirection = undefined;
+    this.lastStartSpeed = undefined;
+    this.lastOrbitInclination = undefined;
+
+    this.canvas = rootElement.querySelector('#canvas');
+    this.context = this.canvas.getContext('2d');
+    this.context3d = new Context3d(this.canvas);
+
+    this.onSettingsChange();
+    this.onOrbitChange();
+    this.toggleVisibility();
+
+    document.body.addEventListener('keypress', (e) => this.onKeyPress(e));
+  }
+
+  onSettingsChange() {
+    if (this.lastStartRadius == this.model.startRadius.getValue() &&
+        this.lastStartDirection == this.model.startDirection.getValue() &&
+        this.lastStartSpeed == this.model.startSpeed.getValue() &&
+        this.lastOrbitInclination == this.model.orbitInclination.getValue()) {
+      return;
+    }
+    this.lastStartRadius = this.model.startRadius.getValue();
+    this.lastStartDirection = this.model.startDirection.getValue();
+    this.lastStartSpeed = this.model.startSpeed.getValue();
+    this.lastOrbitInclination = this.model.orbitInclination.getValue();
+
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.context.strokeStyle = '#AAA';
+    this.context.beginPath();
+    this.drawGrid(100, 12, this.model.orbitInclination.getValue());
+    this.context.stroke();    
+    this.drawAxes();
+    this.drawDisc();
+    this.drawOrbit();
+  }
+
+  onOrbitChange() {
+    const model = this.model;
+    const radiusMeters = model.r * model.blackHoleRadiusMeters;
+    this.blackHoleRadius.innerText =
+        `${this.numberFormat.format(model.blackHoleRadiusMeters / 1000)}km`;
+    this.radius.innerText = 
+        `${this.numberFormat.format(radiusMeters / 1000)}km`;
+    this.speed.innerText = 
+        `${this.numberFormat.format(model.speedMetersPerSecond / 1000)}km/s`;
+    this.localTime.innerText = 
+        `${model.localElapsedTimeSeconds.toFixed(2)}s`;
+    this.globalTime.innerText = 
+        `${model.globalElapsedTimeSeconds.toFixed(2)}s`;
+    this.timeDilation.innerText = 
+        `${model.timeDilationFactor.toFixed(3)}`;
+
+    const ci = Math.cos(this.model.orbitInclination.getValue());
+    const si = Math.sin(this.model.orbitInclination.getValue());
+    const worldPt = [ci * model.r * Math.cos(model.phi),
+                          model.r * Math.sin(model.phi),
+                     si * model.r * Math.cos(model.phi)];
+    const screenPt = 
+        this.context3d.toScreenPt(this.context3d.toCameraPt(worldPt));
+    this.dot.style.left = `${screenPt[0]}px`;
+    this.dot.style.top = `${screenPt[1]}px`;
+  }
+
+  drawGrid(halfSize, steps, orbitInclination) {
+    const ci = Math.cos(orbitInclination);
+    const si = Math.sin(orbitInclination);
+    for (let i = 0; i <= steps; ++i) {
+      const step = -halfSize + 2 * (i / steps) * halfSize;
+      this.context3d.moveTo(-ci * halfSize, step, -si * halfSize);
+      this.context3d.lineTo(ci * halfSize, step, si * halfSize);
+      this.context3d.moveTo(ci * step, -halfSize, si * step);
+      this.context3d.lineTo(ci * step, halfSize, si * step);
+    }
+  }
+
+  drawAxes() {
+    const context = this.context;
+    const context3d = this.context3d;
+    context.strokeStyle = '#F00';
+    context.beginPath();
+    context3d.moveTo(0, 0, 0);
+    context3d.lineTo(40, 0, 0);
+    context.stroke(); 
+    context.strokeStyle = '#0F0';
+    context.beginPath();
+    context3d.moveTo(0, 0, 0);
+    context3d.lineTo(0, 40, 0);
+    context.stroke(); 
+    context.strokeStyle = '#00F';
+    context.beginPath();
+    context3d.moveTo(0, 0, 0);
+    context3d.lineTo(0, 0, 40);
+    context.stroke(); 
+  }
+
+  drawDisc() {
+    const context = this.context;
+    context.strokeStyle = '#FF0';
+    context.lineWidth = 2;
+    context.beginPath();
+    this.drawCircle(3);
+    this.drawCircle(12);
+    context.stroke();
+    context.lineWidth = 1;
+  }
+
+  drawCircle(radius) {
+    this.context3d.moveTo(radius, 0, 0);
+    for (let i = 1; i <= 64; ++i) {
+      const a = 2 * Math.PI * i / 64;
+      this.context3d.lineTo(radius * Math.cos(a), radius * Math.sin(a), 0);
+    }
+  }
+
+  drawOrbit() {
+    const context = this.context;
+    context.lineWidth = 2;
+    context.strokeStyle = '#FFF';
+    context.shadowOffsetX = 1;
+    context.shadowOffsetY = 1;
+    context.shadowBlur = 2;
+    context.shadowColor = '#000';
+    context.beginPath();
+    const ci = Math.cos(this.model.orbitInclination.getValue());
+    const si = Math.sin(this.model.orbitInclination.getValue());
+    const e = this.model.e;
+    const l = this.model.l;
+    let r = this.model.startRadius.getValue();
+    let u = 1 / r;
+    let drOverDtau = -safeSqrt(e * e - (1 - u) - l * l * u * u * (1 - u));
+    let phi = 0;
+
+    let i = 0;
+    let dashes = false;
+    this.context3d.moveTo(ci * r, 0, si * r);
+    while (Math.abs(phi) < 6 * Math.PI) {
+      u = 1 / r;
+      // Adaptive integration step size, chosen such that the proper distance
+      // ds^2 = dr^2 / (1 - u) + r^2 dPhi^2 = dTau^2 (e^2 / (1 - u) - 1) is
+      // constant at each step.
+      const dTau = 1e-2 / Math.sqrt(e * e / (1 - u) - 0.99);
+      const d2rOverDtau2 = u * u * (l * l * u * (2 - 3 * u) - 1) / 2;
+      drOverDtau += d2rOverDtau2 * dTau;
+      r += drOverDtau * dTau;
+      phi += l * u * u * dTau;
+      if (r > 100.0 || r <= 1.0) {
+        break;
+      }
+      if ((++i) % 100 == 0) {
+        const x = r * Math.cos(phi);
+        const y = r * Math.sin(phi);
+        this.context3d.lineTo(ci * x, y, si * x);
+        if (Math.abs(phi) > 5 * Math.PI && !dashes) {
+          context.stroke(); 
+          context.beginPath();
+          this.context3d.moveTo(ci * x, y, si * x);
+          context.setLineDash([5, 5]);
+          dashes = true;
+        }
+      }
+    }
+    context.stroke(); 
+    context.lineWidth = 1;
+    context.setLineDash([]);
+    context.shadowOffsetX = 0;
+    context.shadowOffsetY = 0;
+    context.shadowBlur = 0;
+  }
+
+  onKeyPress(event) {
+    if (event.key == ' ') {
+      this.toggleVisibility();
+    }
+  }
+
+  toggleVisibility() {
+    this.rootElement.classList.toggle('op-hidden');
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  new OrbitPanel(document.body.querySelector('#orbit_panel'), model);
+});
+})(BlackHoleShaderDemoApp.model);
+
+(function(model, State) {
+
+class Checkbox {
+  constructor(rootElement, name, model) {
+    this.checkbox = rootElement.querySelector(`#sp_${name}`);
+    this.checkbox.addEventListener('input', () => {
+      model.setValue(this.checkbox.checked);
+    });
+    this.model = model;
+  }
+  update() {
+    this.checkbox.checked = this.model.getValue();
+  }
+}
+
+class Slider {
+  constructor(rootElement, name, model) {
+    this.slider = rootElement.querySelector(`#sp_${name}`);
+    this.value = rootElement.querySelector(`#sp_${name}_value`);
+    this.model = model;
+
+    this.slider.min = 0;
+    this.slider.max = model.getSize();
+    this.slider.addEventListener('input', () => {
+      model.setIndex(parseInt(this.slider.value));
+    });
+    this.slider.previousElementSibling.addEventListener('click', () => {
+      model.setIndex(model.getIndex() - 1);
+    });
+    this.slider.nextElementSibling.addEventListener('click', () => {
+      model.setIndex(model.getIndex() + 1);
+    });
+  }
+  getValue() { return this.model.getValue(); }
+  setValue(value) { this.model.setValue(value); }
+  enable(enabled) {
+    this.slider.disabled = !enabled;
+    this.slider.previousElementSibling.disabled = !enabled;
+    this.slider.nextElementSibling.disabled = !enabled;
+  }  
+  update(format) {
+    this.slider.value = this.model.getIndex();
+    this.value.innerText = format(this.model.getValue());
+  }
+}
+
+const quaternionFromAxisAngle = function(x, y, z, theta) {
+  const ct = Math.cos(theta * 0.5);
+  const st = Math.sin(theta * 0.5);
+  return [ct, st * x, st * y, st * z];
+};
+
+const quaternionFromEulerAngles = function(yaw, pitch, roll) {
+  const cy = Math.cos(yaw * 0.5);
+  const sy = Math.sin(yaw * 0.5);
+  const cp = Math.cos(pitch * 0.5);
+  const sp = Math.sin(pitch * 0.5);
+  const cr = Math.cos(roll * 0.5);
+  const sr = Math.sin(roll * 0.5);
+  return [
+    cy * cp * cr + sy * sp * sr,
+    cy * cp * sr - sy * sp * cr,
+    sy * cp * sr + cy * sp * cr,
+    sy * cp * cr - cy * sp * sr];
+};
+
+const quaternionProduct = function(q1, q2) {
+  return [
+    q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3],
+    q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2],
+    q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1],
+    q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0]
+  ];
+};
+
+const quaternionToEulerAngles = function(qw, qx, qy, qz) {
+  const sinr_cosp = 2 * (qw * qx + qy * qz);
+  const cosr_cosp = 1 - 2 * (qx * qx + qy * qy);
+  const roll = Math.atan2(sinr_cosp, cosr_cosp);
+  const sinp = 2 * (qw * qy - qz * qx);
+  let pitch;
+  if (Math.abs(sinp) >= 1) {
+    pitch = sinp > 0 ? Math.PI / 2 : -Math.PI / 2;
+  } else {
+    pitch = Math.asin(sinp);
+  }
+  const siny_cosp = 2 * (qw * qz + qx * qy);
+  const cosy_cosp = 1 - 2 * (qy * qy + qz * qz);
+  const yaw = Math.atan2(siny_cosp, cosy_cosp);
+  return [yaw, pitch, roll];
+}
+
+class SettingsPanel {
+  constructor(rootElement, model) {
+    this.rootElement = rootElement;
+    this.model = model;
+    this.model.addListener(this);
+
+    this.exposure =
+        new Slider(rootElement, 'exposure', model.exposure);
+    this.bloom = 
+        new Slider(rootElement, 'bloom', model.bloom);
+    this.startRadius = 
+        new Slider(rootElement, 'start_radius', model.startRadius);
+    this.startDirection = 
+        new Slider(rootElement, 'start_direction', model.startDirection);
+    this.startSpeed = 
+        new Slider(rootElement, 'start_speed', model.startSpeed);
+    this.orbitInclination = 
+        new Slider(rootElement, 'orbit_inclination', model.orbitInclination);
+    this.lensing =
+        new Checkbox(rootElement, 'lensing', model.lensing);
+    this.doppler = 
+        new Checkbox(rootElement, 'doppler', model.doppler);
+    /* TODO: add the 'rocket' setting. */
+    this.grid = 
+        new Checkbox(rootElement, 'grid', model.grid);
+    this.blackHoleMass = 
+        new Slider(rootElement, 'black_hole_mass', model.blackHoleMass);
+    this.discDensity =
+        new Slider(rootElement, 'disc_density', model.discDensity);
+    this.discOpacity =
+        new Slider(rootElement, 'disc_opacity', model.discOpacity);
+    this.discTemperature =
+        new Slider(rootElement, 'disc_temperature', model.discTemperature);
+    this.starsYaw =
+        new Slider(rootElement, 'stars_yaw', model.starsYaw);
+    this.starsPitch =
+        new Slider(rootElement, 'stars_pitch', model.starsPitch);
+    this.starsRoll =
+        new Slider(rootElement, 'stars_roll', model.starsRoll);
+    this.stars = 
+        new Checkbox(rootElement, 'stars', model.stars);
+    this.previousMouseX = undefined;
+    this.previousMouseY = undefined;
+    this.drag = false;
+
+    this.onSettingsChange();
+    this.onOrbitChange();
+    this.toggleVisibility();
+
+    this.rootElement.querySelector('#sp_play').addEventListener(
+        'click', (e) => this.model.setState(State.PLAYING));
+    this.rootElement.querySelector('#sp_pause').addEventListener(
+        'click', (e) => this.model.setState(State.PAUSED));
+    this.rootElement.querySelector('#sp_stop').addEventListener(
+        'click', (e) => this.model.setState(State.STOPPED));
+    document.body.addEventListener('keypress', (e) => this.onKeyPress(e));
+    document.body.addEventListener('wheel', (e) => this.onMouseWheel(e));
+    window.addEventListener('mousedown', (e) => this.onMouseDown(e));
+    window.addEventListener('mousemove', (e) => this.onMouseMove(e));
+    window.addEventListener('mouseup', (e) => this.onMouseUp(e));
+  }
+
+  onSettingsChange() {
+    this.exposure.update((v) => `${(Math.log2(v * 1000)).toPrecision(3)}`);
+    this.bloom.update((v) => `${(v * 100).toFixed(0)}%`);
+    this.startRadius.update((v) => `${v.toPrecision(3)}`);
+    this.startDirection.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);
+    this.startSpeed.update((v) => `${v.toPrecision(3)}`);
+    this.orbitInclination.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);
+    this.lensing.update();
+    this.doppler.update();
+    this.grid.update();
+    this.blackHoleMass.update((v) => `${v.toExponential(2)}`);
+    this.discDensity.update((v) => `${v.toExponential(2)}`);
+    this.discOpacity.update((v) => `${(v * 100).toFixed(1)}%`);
+    this.discTemperature.update((v) => `${v.toFixed(0)}K`);
+    this.starsYaw.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);
+    this.starsPitch.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);
+    this.starsRoll.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);
+    this.stars.update();
+  }
+
+  onOrbitChange() {
+    const playing = this.model.state == State.PLAYING;
+    this.rootElement.classList.toggle('sp-playing', playing);
+
+    const stopped = this.model.state == State.STOPPED;
+    this.startRadius.enable(stopped);
+    this.startDirection.enable(stopped);
+    this.startSpeed.enable(stopped);
+  }
+
+  onKeyPress(event) {
+    const key = event.key;
+    if (key == '+') {
+      this.exposure.setValue(this.exposure.getValue() * 1.1);
+    } else if (key == '-') {
+      this.exposure.setValue(this.exposure.getValue() / 1.1);
+    } else if (key == 'p') {
+      this.model.setState(
+          this.model.state == State.PLAYING ? State.PAUSED : State.PLAYING); 
+    } else if (key == ' ') {
+      this.toggleVisibility();
+    }
+  }
+
+  onMouseWheel(event) {
+    if (this.model.state == State.STOPPED) {
+      if (event.deltaY > 0) {
+        this.startRadius.setValue(this.startRadius.getValue() * 1.05);
+      } else {
+        this.startRadius.setValue(this.startRadius.getValue() / 1.05);
+      }
+    }
+  }
+
+  onMouseDown(event) {
+    this.previousMouseX = event.screenX;
+    this.previousMouseY = event.screenY;
+    this.drag = (event.target.tagName != 'INPUT') && event.ctrlKey;
+  }
+
+  onMouseMove(event) {
+    const kScale = 500;
+    const mouseX = event.screenX;
+    const mouseY = event.screenY;
+    if (this.drag) {
+      const x = (this.previousMouseX - mouseX) / kScale;
+      const y = (this.previousMouseY - mouseY) / kScale;
+      const qx = quaternionFromAxisAngle(0, 0, 1, -x);
+      const qy = quaternionFromAxisAngle(0, 1, 0, y);
+      let q = quaternionFromEulerAngles(this.model.starsYaw.getValue(), 
+          this.model.starsPitch.getValue(), this.model.starsRoll.getValue());    
+      q = quaternionProduct(q, qx);
+      q = quaternionProduct(q, qy);
+      const euler = quaternionToEulerAngles(q[0], q[1], q[2], q[3]);
+      this.model.starsYaw.setValue(euler[0]);
+      this.model.starsPitch.setValue(euler[1]);
+      this.model.starsRoll.setValue(euler[2]);
+    }
+    this.previousMouseX = mouseX;
+    this.previousMouseY = mouseY;
+  }
+
+  onMouseUp(event) {
+    this.drag = false;
+  }
+
+  toggleVisibility() {
+    this.rootElement.classList.toggle('sp-hidden');
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  new SettingsPanel(document.body.querySelector('#settings_panel'), model);
+});
+})(BlackHoleShaderDemoApp.model, BlackHoleShaderDemoApp.State);
+    </script>
+  </head>
+  <body>
+    <script type="x-shader/x-vertex" id="vertex_shader">
+
+uniform vec4 camera_position;
+uniform mat4 camera_orientation;
+uniform vec3 camera_size;
+
+layout(location = 0) in vec4 vertex;
+
+out vec3 p;
+out vec4 k_s;
+out vec3 k;
+out vec3 d;
+
+void main() {
+  InitRay(camera_position, camera_orientation, camera_size, vertex.xy,
+      p, k_s, k, d);
+  gl_Position = vertex;
+}
+    </script>
+    <script type="x-shader/x-fragment" id="fragment_shader">
+
+// The Schwarzschild camera coordinates (p^t, p^r, p^theta, p^phi).
+uniform vec4 camera_position;
+
+uniform sampler2D ray_deflection_texture;
+uniform sampler2D ray_inverse_radius_texture;
+
+uniform samplerCube galaxy_cube_texture;
+uniform samplerCube star_cube_texture;
+uniform samplerCube star_cube_texture2;
+uniform mat3 stars_orientation;
+uniform float min_stars_lod;
+
+uniform sampler2D black_body_texture;
+uniform highp sampler3D doppler_texture;
+uniform vec3 disc_params;
+
+in vec3 p;
+in vec4 k_s;
+in vec3 k;
+in vec3 d;
+
+layout(location = 0) out vec4 frag_color;
+
+// Simple ray-tracing function to compute the intersections of a ray with the
+// scene, when the space-time geometry is assumed to be flat.
+float TraceRayEuclidean(float p_r, float delta, float alpha, float u_min, 
+    float u_max, out float u0, out float phi0, out float t0, out float u1, 
+    out float phi1, out float t1) {
+  float cos_delta = cos(delta);
+  float sin_delta = sin(delta);
+  float tan_alpha = tan(alpha);
+  float det = 1.0 - p_r * p_r * sin_delta * sin_delta;
+  float deflection = det > 0.0 && cos_delta < 0.0 ? -1.0 : 0.0;
+  u0 = -1.0;
+  u1 = -1.0;
+  float t = p_r / (sin_delta / tan_alpha - cos_delta);
+  float r = length(vec2(p_r + t * cos_delta, t * sin_delta));
+  if (t >= 0.0 && r * u_min <= 1.0 && r * u_max >= 1.0 && 
+      (deflection == 0.0 || t < p_r)) {
+    u0 = 1.0 / r;
+    phi0 = alpha;
+    t0 = t;
+  }
+  return deflection;
+}
+
+float RayTrace(float p_r, float delta, float alpha, float u_min, float u_max, 
+               out float u0, out float phi0, out float t0, 
+               out float u1, out float phi1, out float t1) {
+#if (LENSING == 1)
+  return TraceRay(ray_deflection_texture, ray_inverse_radius_texture,
+      p_r, delta, alpha, u_min, u_max, u0, phi0, t0, u1, phi1, t1);
+#else
+  return TraceRayEuclidean(
+      p_r, delta, alpha, u_min, u_max, u0, phi0, t0, u1, phi1, t1);
+#endif
+}
+
+vec3 GalaxyColor(vec3 dir) {
+  dir = stars_orientation * dir;
+#if (GRID == 1)
+  return texture(galaxy_cube_texture, dir).rrr;
+#else
+  return texture(galaxy_cube_texture, dir).rgb * 6.78494e-5;
+#endif
+}
+
+vec3 StarTextureColor(vec3 dir) {
+#if (GRID == 1)
+  return vec3(0.8);
+#else
+  return texture(star_cube_texture2, dir).rgb;
+#endif
+}
+
+vec3 StarTextureColor(vec3 dir, float lod, out vec2 sub_position) {
+#if (GRID == 1)
+  sub_position = vec2(0.0);
+  return vec3(100.0);
+#else
+  vec3 color = textureLod(star_cube_texture, dir, lod).rgb;
+  ivec3 bits = floatBitsToInt(color);
+  sub_position = vec2((bits.xx - bits.yz) % 10000) / 20000.0;
+  return color;
+#endif
+}
+
+vec3 StarColor(vec3 dir, float lensing_amplification_factor) {
+#if (STARS == 1)
+  dir = stars_orientation * dir;
+  return DefaultStarColor(dir, lensing_amplification_factor, min_stars_lod);
+#else
+  return vec3(0.0);
+#endif
+}
+
+vec3 Doppler(vec3 rgb, float doppler_factor) {
+#if (DOPPLER == 1)
+  return DefaultDoppler(doppler_texture, rgb, doppler_factor);
+#else
+  return rgb;
+#endif
+}
+
+vec4 GridDiscColor(vec2 p, float t, bool top_side, float doppler_factor,
+    float temperature, sampler2D black_body_texture) {
+  float p_r = length(p);
+  const float uM = 1.0 / 6.0;
+  const float dphi_dt = uM * sqrt(0.5 * uM) / (2.0 * pi);
+  float p_phi = atan(p.y, p.x) - t * dphi_dt;
+  float value_phi = mod(p_phi / pi * 16.0, 1.0) < 0.2 ? 0.0 : 1.0;
+  float value_r = mod(p_r / 2.0, 1.0) < 0.2 ? 0.0 : 1.0; 
+  vec3 color = BlackBodyColor(black_body_texture, temperature * doppler_factor);
+  color *= 0.2 + 0.8 * value_phi * value_r;
+  return vec4(top_side ? color : color * 0.01, 1.0);
+}
+
+vec4 DiscColor(vec2 p, float t, bool top_side, float doppler_factor) {
+  float density = disc_params.x;
+  float opacity = disc_params.y;
+  float temperature = disc_params.z;
+#if (DOPPLER == 0)
+  doppler_factor = 1.0;
+#endif
+#if (GRID == 1)
+  vec4 color = GridDiscColor(
+      p, t, top_side, doppler_factor, temperature, black_body_texture);
+#else
+  vec4 color = DefaultDiscColor(
+      p, t, top_side, doppler_factor, temperature, black_body_texture);
+#endif
+  return vec4(density * color.rgb, opacity * color.a);
+}
+
+void main() {
+  frag_color.rgb = SceneColor(camera_position, p, k_s, k, d);
+  frag_color.a = 1.0;
+}
+    </script>
+    <script type="x-shader/x-fragment" id="black_hole_shader">
+
+// The types used in the main functions of our black hole shader. C++ equivalent
+// of these types are used to compile these functions with a C++ compiler, both
+// to reuse them in order to precompute the textures they need, and for testing
+// them.
+
+// Angles and dimensionless quantities.
+#define Angle float
+#define Real float
+
+// An angle and a time (in the 1st and 2nd components, respectively).
+#define TimedAngle vec2
+
+// An inverse distance and a time (in the 1st and 2nd components, respectively).
+#define TimedInverseDistance vec2
+
+// A 2D texture with TimedAngle values.
+#define RayDeflectionTexture sampler2D
+
+// A 2D texture with TimedInverseDistance values.
+#define RayInverseRadiusTexture sampler2D
+
+// -----------------------------------------------------------------------------
+// Lookup function for D(e, u), the ray deflection texture.
+// -----------------------------------------------------------------------------
+
+const Real kMu = 4.0 / 27.0;
+
+Real GetRayDeflectionTextureUFromEsquare(const Real e_square) {
+  if (e_square < kMu) {
+    return 0.5 - sqrt(-log(1.0 - e_square / kMu) * (1.0 / 50.0));
+  } else {
+    return 0.5 + sqrt(-log(1.0 - kMu / e_square) * (1.0 / 50.0));
+  }
+}
+
+Real GetUapsisFromEsquare(const Real e_square) {
+  Real x = (2.0 / kMu) * e_square - 1.0;
+  return 1.0 / 3.0 + (2.0 / 3.0) * sin(asin(x) * (1.0 / 3.0));
+}
+
+Real GetRayDeflectionTextureVFromEsquareAndU(const Real e_square,
+                                             const Real u) {
+  if (e_square > kMu) {
+    Real x = u < 2.0 / 3.0 ? -sqrt(2.0 / 3.0 - u) : sqrt(u - 2.0 / 3.0);
+    return (x + sqrt(2.0 / 3.0)) / (sqrt(1.0 / 3.0) + sqrt(2.0 / 3.0));
+  } else {
+    return 1.0 - sqrt(max(1.0 - u / GetUapsisFromEsquare(e_square), 0.0));
+  }
+}
+
+Real GetTextureCoordFromUnitRange(const Real x, const int texture_size) {
+  return 0.5 / Real(texture_size) + x * (1.0 - 1.0 / Real(texture_size));
+}
+
+TimedAngle LookupRayDeflection(IN(RayDeflectionTexture) ray_deflection_texture,
+                               const Real e_square, const Real u,
+                               OUT(TimedAngle) deflection_apsis) {
+  Real tex_u = GetTextureCoordFromUnitRange(
+      GetRayDeflectionTextureUFromEsquare(e_square),
+      RAY_DEFLECTION_TEXTURE_WIDTH);
+  Real tex_v = GetTextureCoordFromUnitRange(
+      GetRayDeflectionTextureVFromEsquareAndU(e_square, u),
+      RAY_DEFLECTION_TEXTURE_HEIGHT);
+  Real tex_v_apsis =
+      GetTextureCoordFromUnitRange(1.0, RAY_DEFLECTION_TEXTURE_HEIGHT);
+  deflection_apsis =
+      TimedAngle(texture(ray_deflection_texture, vec2(tex_u, tex_v_apsis)));
+  return TimedAngle(texture(ray_deflection_texture, vec2(tex_u, tex_v)));
+}
+
+// -----------------------------------------------------------------------------
+// Lookup function for U(e, phi), the ray inverse radius texture.
+// -----------------------------------------------------------------------------
+
+Angle GetPhiUpFromEsquare(const Real e_square) {
+  return (e_square + 1.0) / (2.0 * e_square * sqrt(e_square) + 1.0 / 3.0) * rad;
+}
+
+Real GetRayInverseRadiusTextureUFromEsquare(const Real e_square) {
+  return 1.0 / (6.0 * e_square + 1.0);
+}
+
+TimedInverseDistance LookupRayInverseRadius(IN(RayInverseRadiusTexture)
+                                                ray_inverse_radius_texture,
+                                            const Real e_square,
+                                            const Angle phi) {
+  Real tex_u = GetTextureCoordFromUnitRange(
+      GetRayInverseRadiusTextureUFromEsquare(e_square),
+      RAY_INVERSE_RADIUS_TEXTURE_WIDTH);
+  Real tex_v = GetTextureCoordFromUnitRange(phi / GetPhiUpFromEsquare(e_square),
+                                            RAY_INVERSE_RADIUS_TEXTURE_HEIGHT);
+  return TimedInverseDistance(
+      texture(ray_inverse_radius_texture, vec2(tex_u, tex_v)));
+}
+
+// -----------------------------------------------------------------------------
+// Main "ray-tracing" function, using the above lookup functions to get the ray
+// deflection and the ray intersections with the accretion disc in constant time
+// (and at most 4 texture lookups).
+// -----------------------------------------------------------------------------
+
+Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
+               IN(RayInverseRadiusTexture) ray_inverse_radius_texture,
+               const Real p_r, const Angle delta, const Angle alpha,
+               const Real u_min, const Real u_max, OUT(Real) u0,
+               OUT(Angle) phi0, OUT(Real) t0, OUT(Real) u1, OUT(Angle) phi1,
+               OUT(Real) t1) {
+  // Compute the ray deflection.
+  Real u = 1.0 / p_r;
+  Real u_prime = -u / tan(delta);
+  Real e_square = u_prime * u_prime + u * u * (1.0 - u);
+  u0 = -1.0;
+  u1 = -1.0;
+  if (e_square < kMu && u > 2.0 / 3.0) {
+    return -1.0 * rad;
+  }
+  TimedAngle deflection_apsis;
+  TimedAngle deflection = LookupRayDeflection(ray_deflection_texture, e_square,
+                                              u, deflection_apsis);
+  Angle ray_deflection = deflection.x;
+  if (u_prime > 0.0) {
+    ray_deflection =
+        e_square > kMu ? -1.0 * rad : 2.0 * deflection_apsis.x - ray_deflection;
+  }
+  // Compute the accretion disc intersections.
+  Real s = sign(u_prime);
+  Angle phi = deflection.x + (s == 1.0 ? pi - delta : delta) + s * alpha;
+  Angle phi_apsis = deflection_apsis.x + pi / 2.0;
+  phi0 = mod(phi, pi);
+  TimedInverseDistance ui =
+      LookupRayInverseRadius(ray_inverse_radius_texture, e_square, phi0);
+  if (phi0 < phi_apsis && ui.x >= u_min && ui.x <= u_max &&
+      (sign(ui.x - u) == s)) {
+    u0 = ui.x;
+    phi0 = alpha + phi - phi0;
+    t0 = s * (ui.y - deflection.y);
+  }
+  if (e_square < kMu && s == 1.0) {
+    phi = 2.0 * phi_apsis - phi;
+    phi1 = mod(phi, pi);
+    ui = LookupRayInverseRadius(ray_inverse_radius_texture, e_square, phi1);
+    if (phi1 < phi_apsis && ui.x >= u_min && ui.x <= u_max) {
+      if (u0 == -1.0) {
+        u0 = ui.x;
+        phi0 = alpha + phi - phi1;
+        t0 = 2.0 * deflection_apsis.y - ui.y - deflection.y;
+      } else {
+        u1 = ui.x;
+        phi1 = alpha + phi - phi1;
+        t1 = 2.0 * deflection_apsis.y - ui.y - deflection.y;
+      }
+    }
+  }
+  return ray_deflection;
+}
+
+#ifdef VERTEX_SHADER
+
+// -----------------------------------------------------------------------------
+// Ray initialization.
+// -----------------------------------------------------------------------------
+
+// Initializes a ray from the camera position and from pixel coordinates.
+// Inputs:
+// - camera_position: the camera position, in Schwarzschild coordinates
+//   (p^t, p^r, p^theta,p^phi).
+// - camera_orientation: the Lorentz transformation specifying the camera
+//   orientation and velocity.
+// - camera_size: the half width, half height and focal length of the camera.
+// - vertex: the normalized vertex position on screen, in [-1,1]x[-1,1].
+//
+// Outputs:
+// - p: the camera position, in (pseudo-)Cartesian coordinates.
+// - k_s: the camera 4-velocity, in Schwarzschild coordinates.
+// - k: the camera velocity, in (pseudo-)Cartesian coordinates.
+// - d: the view ray direction, in (pseudo-)Cartesian coordinates.
+void InitRay(vec4 camera_position, mat4 camera_orientation, vec3 camera_size,
+             vec2 vertex, out vec3 p, out vec4 k_s, out vec3 k, out vec3 d) {
+  float r = camera_position[1];
+  float cos_theta = cos(camera_position[2]);
+  float sin_theta = sin(camera_position[2]);
+  float cos_phi = cos(camera_position[3]);
+  float sin_phi = sin(camera_position[3]);
+
+  float u = 1.0 / r;
+  float v = sqrt(1.0 - u);
+  vec4 ur = vec4(0.0, sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);
+
+  vec4 e_t = vec4(1.0 / v, 0.0, 0.0, 0.0);
+  vec4 e_r = v * ur;
+  vec4 e_theta = 
+      vec4(0.0, cos_theta * cos_phi, cos_theta * sin_phi, -sin_theta);
+  vec4 e_phi = vec4(0.0, -sin_phi, cos_phi, 0.0);
+
+  mat4 L = camera_orientation;
+  vec4 e_tau = 
+      L[0][0] * e_t + L[1][0] * e_r + L[2][0] * e_theta + L[3][0] * e_phi;
+  vec4 e_w = 
+      L[0][1] * e_t + L[1][1] * e_r + L[2][1] * e_theta + L[3][1] * e_phi;
+  vec4 e_h = 
+      L[0][2] * e_t + L[1][2] * e_r + L[2][2] * e_theta + L[3][2] * e_phi;
+  vec4 e_d = 
+      L[0][3] * e_t + L[1][3] * e_r + L[2][3] * e_theta + L[3][3] * e_phi;
+
+  vec3 q = vec3(vertex * camera_size.xy, -camera_size.z);
+
+  p = r * ur.yzw;
+  k_s = vec4(L[0][0] / v, v * L[1][0], u * L[2][0], u / sin_theta * L[3][0]);
+  k = e_tau.yzw;
+  d = (q.x * e_w + q.y * e_h + q.z * e_d).yzw;
+}
+
+#else
+
+// -----------------------------------------------------------------------------
+// Shading.
+// -----------------------------------------------------------------------------
+
+// Returns the color of a black body of the given temperature. The 1D texture
+// should contain this color at texture coord log(T / 100) / 6.
+vec3 BlackBodyColor(sampler2D black_body_texture, float temperature) {
+  float tex_u = (1.0 / 6.0) * log(temperature * (1.0 / 100.0));
+  return texture(black_body_texture, vec2(tex_u, 0.5)).rgb;
+}
+
+// Abstract functions, which must be implemented by the user:
+// - ray tracing function (see the default implementation in functions.glsl).
+Angle RayTrace(Real p_r, Angle delta, Angle alpha, Real u_min, Real u_max, 
+               out Real u0, out Angle phi0, out Real t0, 
+               out Real u1, out Angle phi1, out Real t1);
+// - Doppler function (see the default implementation below).
+vec3 Doppler(vec3 rgb, float doppler_factor);
+// - average color of the extended light sources (e.g. nebulae and galaxies) in
+//   the footprint of the pixel in direction 'dir'.
+vec3 GalaxyColor(vec3 dir);
+// - average color of the punctual light sources (i.e. stars) in the footprint
+//   of the pixel in direction 'dir'.
+vec3 StarTextureColor(vec3 dir);
+// - *sum* (in the footprint of the pixel in direction 'dir') of the colors of
+//   the punctual light sources in the texel at 'lod' corresponding to 'dir', 
+//   and sub-texel position (in [-0.5,0.5]^2).
+vec3 StarTextureColor(vec3 dir, float lod, out vec2 sub_position);
+// - color of the stars in the footprint of the pixel in direction 'dir', times
+//   the given gravitational lensing amplification factor.
+vec3 StarColor(vec3 dir, float lensing_amplification_factor);
+// - color and opacity of the accretion disc at 'p', and at time 't', for the
+//   top or bottom side of the disc, and with the given Doppler factor.
+vec4 DiscColor(vec2 p, float t, bool top_side, float doppler_factor);
+
+// Default implementation for 'Doppler'.
+// Returns the given color when shifted by the given Doppler factor. The 3D
+// texture should contain this color at texture coord (r, 2*g, d) where r, g is
+// the rg chromaticity and d = atan(log(doppler_factor) / 0.21) / 3 + 0.5.
+vec3 DefaultDoppler(sampler3D doppler_texture, vec3 rgb, float doppler_factor) {
+  float sum = rgb.r + rgb.g + rgb.b;
+  if (sum == 0.0) {
+    return vec3(0.0);
+  }
+  vec3 tex_coord;
+  tex_coord.x = rgb.r / sum;
+  tex_coord.y = 2.0 * rgb.g / sum;
+  tex_coord.z = (1.0 / 3.0) * atan((1.0 / 0.21) * log(doppler_factor)) + 0.5;
+  return sum * texture(doppler_texture, tex_coord).rgb;
+}
+
+// Default implementation for 'StarColor', which uses the two 'StarTextureColor'
+// functions above, and assumes they are based on a cube map. The following
+// constants must be provided by the user:
+// - const float STARS_CUBE_MAP_SIZE = ...;
+// - const float MAX_FOOTPRINT_SIZE = ...;
+// - const float MAX_FOOTPRINT_LOD = ...;
+// They define the size in pixels of the cube map, the maximum with and height
+// of the footprint to consider around 'dir' (so the maximum number of texels
+// used will be the square of this number), and the maximum LOD for which
+// 'StarTextureColor(dir, lod, sub_position)' must be used (for larger LODs,
+// 'StarTextureColor(dir)' is used instead).
+vec3 DefaultStarColor(vec3 dir, float lensing_amplification_factor, 
+    float min_lod) {
+  // Compute the partial derivatives of dir (continuous across cube edges).
+  vec3 dx_dir = dFdx(dir);
+  vec3 dy_dir = dFdy(dir);
+
+  // Swap the coordinates depending on the cube face, to always get the maximum
+  // absolute value of the 'dir' components in the z coordinate.
+  vec3 abs_dir = abs(dir);
+  float max_abs_dir_comp = max(abs_dir.x, max(abs_dir.y, abs_dir.z));
+  if (max_abs_dir_comp == abs_dir.x) {
+    dir = dir.zyx;
+    dx_dir = dx_dir.zyx;
+    dy_dir = dy_dir.zyx;
+  } else if (max_abs_dir_comp == abs_dir.y) {
+    dir = dir.xzy;
+    dx_dir = dx_dir.xzy;
+    dy_dir = dy_dir.xzy;
+  }
+
+  // Compute the cube face texture coordinates uv and their derivatives dx_uv
+  // and dy_uv (using an analytic formula instead of dFdx and dFdy, to avoid
+  // discontinuities at cube edges - uv is not continuous here).
+  float inv_dir_z = 1.0 / dir.z;
+  vec2 uv = dir.xy * inv_dir_z;
+  vec2 dx_uv = (dx_dir.xy - uv * dx_dir.z) * inv_dir_z;
+  vec2 dy_uv = (dy_dir.xy - uv * dy_dir.z) * inv_dir_z;
+
+  // Compute the LOD level to use to fetch the stars in the footprint of 'dir'.
+  vec2 d_uv = max(abs(dx_uv + dy_uv), abs(dx_uv - dy_uv));
+  vec2 fwidth = (0.5 * STARS_CUBE_MAP_SIZE / MAX_FOOTPRINT_SIZE) * d_uv;
+  float lod = max(ceil(max(log2(fwidth.x), log2(fwidth.y))), min_lod);
+  float lod_width = (0.5 * STARS_CUBE_MAP_SIZE) / pow(2.0, lod);
+  if (lod > MAX_FOOTPRINT_LOD) {
+    return StarTextureColor(dir);
+  }
+
+  // Fetch, filter and accumulate the colors of the stars in the texels in the
+  // footprint of 'dir' at 'lod'.
+  mat2 to_screen_pixel_coords = inverse(mat2(dx_uv, dy_uv));
+  ivec2 ij0 = ivec2(floor((uv - d_uv) * lod_width));
+  ivec2 ij1 = ivec2(floor((uv + d_uv) * lod_width));
+  vec3 color_sum = vec3(0.0);
+  for (int j = ij0.y; j <= ij1.y; ++j) {
+    for (int i = ij0.x; i <= ij1.x; ++i) {
+      vec2 texel_uv = (vec2(i, j) + vec2(0.5)) / lod_width;
+      vec3 texel_dir = vec3(texel_uv * dir.z, dir.z);
+      if (max_abs_dir_comp == abs_dir.x) { texel_dir = texel_dir.zyx; } 
+      else if (max_abs_dir_comp == abs_dir.y) { texel_dir = texel_dir.xzy; }
+      vec2 delta_uv;
+      vec3 star_color = StarTextureColor(texel_dir, lod, delta_uv);
+      vec2 star_uv = uv - texel_uv + delta_uv / lod_width;
+      vec2 star_pixel_coords = to_screen_pixel_coords * star_uv;
+      vec2 overlap = max(vec2(1.0) - abs(star_pixel_coords), 0.0);
+      color_sum += star_color * overlap.x * overlap.y;
+    }
+  }
+  return color_sum * lensing_amplification_factor;
+}
+
+// Default implementation for 'DiscColor'.
+// The following constants must be provided by the user:
+// - const float INNER_DISC_R = ...;
+// - const float OUTER_DISC_R = ...;
+// - const int NUM_DISC_PARTICLES = ...;
+// - const vec4 DISC_PARTICLE_PARAMS[NUM_DISC_PARTICLES] = ...;
+// They define the inner and outer radius of the disc, the number of particles
+// used to compute its density, and the orbital parameters for each particle
+// (inverse max and min radius, initial azimuth angle, precession 'ratio').
+vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
+    float disc_temperature, sampler2D black_body_texture) {
+  float p_r = length(p);
+  float p_phi = atan(p.y, p.x);
+
+  float density = 2.0;
+  for (int i = 0; i < NUM_DISC_PARTICLES; ++i) {
+    vec4 params = DISC_PARTICLE_PARAMS[i];
+    float u1 = params.x;
+    float u2 = params.y;
+    float phi0 = params.z;
+    float dtheta_dphi = params.w;
+    float u_avg = (u1 + u2) * 0.5;
+    float dphi_dt = u_avg * sqrt(0.5 * u_avg);
+    float dphi = dphi_dt * p_t;
+    float phi = mod(p_phi - dphi, 2.0 * pi);
+    float s = sin(dtheta_dphi * (phi + dphi) + phi0);
+    float r = 1.0 / (u1 + (u2 - u1) * s * s);
+    vec2 d = vec2((phi - pi) / pi, r - p_r);
+    density += smoothstep(1.0, 0.0, length(d));
+  }
+
+  const float r_max = 49.0 / 12.0;
+  const float temperature_profile_max = 
+      pow((1.0 - sqrt(3.0 / r_max)) / (r_max * r_max * r_max), 0.25);
+  float temperature_profile = 
+      pow((1.0 - sqrt(3.0 / p_r)) / (p_r * p_r * p_r), 0.25);
+  float temperature = 
+      disc_temperature * temperature_profile * (1.0 / temperature_profile_max);
+
+  vec3 color = density * 
+      BlackBodyColor(black_body_texture, temperature * doppler_factor);
+  float alpha = smoothstep(INNER_DISC_R, INNER_DISC_R * 1.2, p_r) * 
+      smoothstep(OUTER_DISC_R, OUTER_DISC_R / 1.2, p_r);
+  return vec4(color * alpha, alpha);
+}
+
+// Finds the intersection of the given view ray with the scene, computes the
+// emitted light at these intersection points, computes the corresponding
+// received light, and composites and returns the final pixel color. 
+//
+// Inputs:
+// - camera_position: the camera position, in Schwarzschild coordinates
+//     (p^t, p^r, p^theta,p^phi).
+// - p: the camera position, in (pseudo-)Cartesian coordinates.
+// - k_s: the camera 4-velocity, in Schwarzschild coordinates.
+// - k: the camera velocity, in (pseudo-)Cartesian coordinates.
+// - d: the view ray direction, in (pseudo-)Cartesian coordinates.
+vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 k, vec3 d) {
+  vec3 e_x_prime = normalize(p);
+  vec3 e_z_prime = normalize(cross(e_x_prime, d));
+  vec3 e_y_prime = normalize(cross(e_z_prime, e_x_prime));
+
+  const vec3 e_z = vec3(0.0, 0.0, 1.0);
+  vec3 t = normalize(cross(e_z, e_z_prime));
+  if (dot(t, e_y_prime) < 0.0) {
+    t = -t;
+  }
+
+  float alpha = acos(dot(e_x_prime, t));
+  float delta = acos(dot(e_x_prime, normalize(d)));
+
+  float u0, phi0, t0, u1, phi1, t1;
+  float deflection = RayTrace(camera_position[1], delta, alpha,
+      1.0 / OUTER_DISC_R, 1.0 / INNER_DISC_R, u0, phi0, t0, u1, phi1, t1);
+
+  float u = 1.0 / camera_position[1];
+  float u_prime = -u / tan(delta);
+  float e = -sqrt(u_prime * u_prime + u * u * (1.0 - u));
+
+  vec4 l = vec4(e / (1.0 - u), -u_prime, 0.0, u * u);
+  float g_k_l_receiver = k_s.x * l.x * (1.0 - u) -
+      k_s.y * l.y / (1.0 - u) - u * dot(k, e_y_prime) * l.w / (u * u);
+
+  vec3 color = vec3(0.0, 0.0, 0.0);
+  if (deflection >= 0.0) {
+    float g_k_l_source = e;
+    float doppler_factor = g_k_l_receiver / g_k_l_source;
+
+    float delta_prime = delta + deflection;
+    vec3 d_prime = cos(delta_prime) * e_x_prime + sin(delta_prime) * e_y_prime;
+
+    float lensing_amplification_factor = abs(sin(delta) / sin(delta_prime) /
+        (1.0 + fwidth(deflection) / fwidth(delta)));
+    // Clamp the result (otherwise potentially infinite) and use a hack to avoid
+    // an artefact in the direction opposite to the black hole center.
+    lensing_amplification_factor = 
+        delta < 0.01 ? 1.0 : min(lensing_amplification_factor, 1e6);
+
+    color += GalaxyColor(d_prime);
+    color += StarColor(d_prime, lensing_amplification_factor);
+    color = Doppler(color, doppler_factor);
+  }
+  if (u1 >= 0.0) {
+    float g_k_l_source = e * sqrt(2.0 / (2.0 - 3.0 * u1)) - 
+        u1 * sqrt(u1 / (2.0 - 3.0 * u1)) * dot(e_z, e_z_prime);
+    float doppler_factor = g_k_l_receiver / g_k_l_source;
+    bool top_side = 
+        (mod(abs(phi1 - alpha), 2.0 * pi) < 1e-3) == (e_x_prime.z > 0.0);
+
+    vec3 i1 = (e_x_prime * cos(phi1) + e_y_prime * sin(phi1)) / u1;
+    vec4 disc_color =
+        DiscColor(i1.xy, camera_position[0] - t1, top_side, doppler_factor);
+    color = color * (1.0 - disc_color.a) + disc_color.rgb;
+  }
+  if (u0 >= 0.0) {
+    float g_k_l_source = e * sqrt(2.0 / (2.0 - 3.0 * u0)) - 
+        u0 * sqrt(u0 / (2.0 - 3.0 * u0)) * dot(e_z, e_z_prime);
+    float doppler_factor = g_k_l_receiver / g_k_l_source;
+    bool top_side = 
+        (mod(abs(phi0 - alpha), 2.0 * pi) < 1e-3) == (e_x_prime.z > 0.0);
+    
+    vec3 i0 = (e_x_prime * cos(phi0) + e_y_prime * sin(phi0)) / u0;
+    vec4 disc_color =
+        DiscColor(i0.xy, camera_position[0] - t0, top_side, doppler_factor);
+    color = color * (1.0 - disc_color.a) + disc_color.rgb;
+  }
+  return color;
+}
+
+#endif
+    </script>
+    <div class="cv-container">
+      <canvas id="camera_view" width="400" height="300"></canvas>
+      <div id="cv_error_panel" class="cv-error-panel cv-hidden">
+      </div>
+      <div id="cv_loading_panel" class="cv-loading-panel">
+        <span>Loading stars data...</span>
+        <div class="cv-loading-bar">
+          <div id="cv_loading_bar" class="cv-loading-bar-value"></div>
+        </div>
+        <span>Press <em>space</em> to show / hide the User Interface</span>
+      </div>
+      <div class="cv-copyright">@2020 Eric Bruneton. 
+        <a href="https://github.com/ebruneton/black_hole_shader"
+           target="_blank">
+          GitHub project
+        </a>. Star data from 
+        <a href="https://www.cosmos.esa.int/web/gaia/dr2" 
+           target="_blank">
+          Gaia DR2
+        </a> and 
+        <a href="https://www.cosmos.esa.int/web/hipparcos/tycho-2" 
+           target="_blank">
+          Tycho 2
+        </a>
+      </div>
+    </div>
+    <div id="orbit_panel" class="op-panel op-hidden">
+      <canvas id="canvas" width="400" height="400"></canvas>
+      <div id="op_dot" class="op-dot"></div>
+      <div class="op-info">
+         <div title="Radius of the black hole's event horizon, in kilometers">
+           Black hole radius:
+           <span id="op_black_hole_radius"></span>
+         </div>
+         <div title="Distance of the observer from the black hole center, in kilometers
+(i.e. the Schwarzschild 'r' coordinate)">
+           Distance: 
+           <span id="op_radius"></span>
+         </div>
+         <div title="Speed of the observer, in kilometers per second
+(with respect to a static observer at the current location)">
+           Speed: 
+           <span id="op_speed"></span>
+         </div>
+         <div title="Proper time of the observer, in seconds">
+           Local time:
+           <span id="op_local_time"></span>
+         </div>
+         <div title="Time on Earth, in seconds">
+           Earth time: 
+           <span id="op_global_time"></span>
+         </div>
+         <div title="Time dilation factor
+(1 second for the observer = <Time dilation> seconds on Earth)">
+           Time dilation:
+           <span id="op_time_dilation"></span>
+         </div>
+      </div>
+    </div>
+    <form id="settings_panel" class="sp-panel sp-hidden">
+      <details open="true" class="sp-settings-container">
+        <summary>Camera</summary>
+
+        <div class="sp-setting" 
+             title="Camera exposure, in stops
+(one stop = doubling or halving the amount of light you let in)
+
+Shortcut keys: '+' / '-' to increase / decrease exposure.">
+          <label>Exposure</label>
+          <span class="sp-slider-container">
+            <button type="button">-</button>
+            <input type="range" id="sp_exposure">
+            <button type="button">+</button>
+          </span>
+          <span id="sp_exposure_value" class="sp-value"></span>
+        </div>
+
+        <div class="sp-setting"
+             title="Bloom intensity
+(amount of scattering and diffraction in the camera)">
+          <label>Bloom</label>
+          <span class="sp-slider-container">
+            <button type="button">-</button>
+            <input type="range" id="sp_bloom">
+            <button type="button">+</button>
+          </span>
+          <span id="sp_bloom_value" class="sp-value"></span>
+        </div>
+
+        <h3>Orbit</h3>
+
+        <div class="sp-settings-container">
+          <div class="sp-setting" 
+               title="Initial distance of the observer from the black hole center
+(i.e. the Schwarzschild 'r' coordinate, divided by the black hole radius)
+
+Shortcut: use the mouse wheel to increase / decrease the initial distance">
+            <label>Initial distance</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_start_radius">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_start_radius_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting"
+               title="Initial direction of the observer's trajectory
+(in degrees)">
+            <label>Initial direction</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_start_direction">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_start_direction_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting" 
+               title="Initial speed of the observer
+(with respect to a static observer, as a fraction of the speed of light)">
+            <label>Initial speed</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_start_speed">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_start_speed_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting" 
+               title="Inclination of the observer's orbit plane
+(with respect to the accretion disc, in degrees)">
+            <label>Inclination</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_orbit_inclination">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_orbit_inclination_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting">
+            <label>Motion</label>
+            <span class="sp-play-container">
+              <button id="sp_play" type="button" class="sp-play"
+                      title="Play
+
+Shortcut key: 'p'">⏵</button>
+              <button id="sp_pause" type="button" class="sp-pause" 
+                      title="Pause
+
+Shortcut key: 'p'">⏸</button>
+              <button id="sp_stop" type="button" class="sp-stop" 
+                      title="Stop">⏹</button>
+            </span>
+          </div>
+        </div>
+      </details>
+
+      <details open="true" class="sp-settings-container">
+        <summary>Physics</summary>
+
+        <div class="sp-setting" 
+             title="Enables the bending of light by the gravitational field">
+          <label for="lensing">Lensing</label>
+          <input type="checkbox" name="lensing" id="sp_lensing">
+        </div>
+
+        <div class="sp-setting"
+             title="Enables the relativistic and gravitational Doppler and beaming effects">
+          <label for="doppler">Doppler</label>
+          <input type="checkbox" name="doppler" id="sp_doppler">
+        </div>
+      </details>
+
+      <details open="true" class="sp-settings-container">
+        <summary>Scene</summary>
+
+        <!-- TODO: add the 'rocket' setting -->
+
+        <div class="sp-setting" 
+             title="Enables non-realistic grid patterns
+(to better illustrate the physical phenomena)">
+          <label for="grid">Grid</label>
+          <input type="checkbox" name="grid" id="sp_grid">
+        </div>
+
+        <div class="sp-setting" 
+             title="Black hole mass (in Solar mass)">
+          <label>Black hole mass</label>
+          <span class="sp-slider-container">
+            <button type="button">-</button>
+            <input type="range" id="sp_black_hole_mass">
+            <button type="button">+</button>
+          </span>
+          <span id="sp_black_hole_mass_value" class="sp-value"></span>
+        </div>
+
+        <h3>Disc</h3>
+
+        <div class="sp-settings-container">
+          <div class="sp-setting"
+               title="Density of the accretion disc (in unspecified units)">
+            <label>Density</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_disc_density">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_disc_density_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting"
+               title="Opacity of the accretion disc (in percentage)">
+            <label>Opacity</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_disc_opacity">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_disc_opacity_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting" 
+               title="Maximum temperature of the accretion disc (in Kelvins)">
+            <label>Temperature</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_disc_temperature">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_disc_temperature_value" class="sp-value"></span>
+          </div>
+        </div>
+
+        <h3>Stars</h3>
+
+        <div class="sp-settings-container">
+          <div class="sp-setting" 
+               title="Orientation of the star field (yaw)
+
+Shortcut: CTRL + mouse drag">
+            <label>Yaw</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_stars_yaw">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_stars_yaw_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting"
+               title="Orientation of the star field (pitch)
+
+Shortcut: CTRL + mouse drag">
+            <label>Pitch</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_stars_pitch">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_stars_pitch_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting" 
+               title="Orientation of the star field (roll)
+
+Shortcut: CTRL + mouse drag">
+            <label>Roll</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_stars_roll">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_stars_roll_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting sp-last" 
+               title="Enables stars">
+            <label for="stars">Enabled</label>
+            <input type="checkbox" name="stars" id="sp_stars" checked>
+          </div>
+
+        </div>
+      </details>
+    </form>
+  </body>
+</html>
