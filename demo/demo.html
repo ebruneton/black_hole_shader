@@ -463,6 +463,7 @@ class Model {
 
     this.blackHoleRadiusMeters = undefined;
     this.speedMetersPerSecond = undefined;
+    this.gForce = undefined;
     this.localElapsedTimeSeconds = 0;
     this.globalElapsedTimeSeconds = 0;
 
@@ -648,10 +649,12 @@ class Model {
     const u = 1 / this.r;
     if (this.state == State.PLAYING) {
       this.speedMetersPerSecond = Math.sqrt(1 - (1 - u) / (e * e)) * C;
+      this.gForce = 0;
       this.timeDilationFactor = e / (1 - u);
     } else {
       const rMeters = this.r * this.blackHoleRadiusMeters;
       this.speedMetersPerSecond = 0;
+      this.gForce = G * M / (rMeters * rMeters * Math.sqrt(1 - u));
       this.timeDilationFactor = 1 / Math.sqrt(1 - u);
     }
   }
@@ -1546,7 +1549,7 @@ const generateDiscParticleParams = function() {
   let ringParams = '';
   let numRings = 0;
   for (let r1 = rMin; r1 < rMax; r1 += 0.2) {
-    const e = 0.3 * Math.random();
+    const e = 0.1 * Math.random();
     const r2 = r1 * (1.0 + e) / (1.0 - e);
     const u1 = 1 / r2;
     const u2 = 1 / r1;
@@ -1731,7 +1734,7 @@ class CameraView {
     document.addEventListener('visibilitychange', (e) => {
       this.hidden = document.hidden;
       if (!this.hidden) {
-        this.frameTime = undefined;
+        this.lastFrameTime = undefined;
         this.onRender();
       }
     });
@@ -2009,6 +2012,7 @@ class OrbitPanel {
     this.blackHoleRadius = rootElement.querySelector('#op_black_hole_radius');
     this.radius = rootElement.querySelector('#op_radius');
     this.speed = rootElement.querySelector('#op_speed');
+    this.gforce = rootElement.querySelector('#op_gforce');
     this.localTime = rootElement.querySelector('#op_local_time');
     this.globalTime = rootElement.querySelector('#op_global_time');
     this.timeDilation = rootElement.querySelector('#op_time_dilation');
@@ -2063,6 +2067,8 @@ class OrbitPanel {
         `${this.numberFormat.format(radiusMeters / 1000)}km`;
     this.speed.innerText = 
         `${this.numberFormat.format(model.speedMetersPerSecond / 1000)}km/s`;
+    this.gforce.innerText = 
+        `${this.numberFormat.format(model.gForce / 9.80665)}g`;
     this.localTime.innerText = 
         `${model.localElapsedTimeSeconds.toFixed(2)}s`;
     this.globalTime.innerText = 
@@ -2826,7 +2832,7 @@ void InitRay(vec4 camera_position, mat4 camera_orientation, vec3 camera_size,
   p = r * ur.yzw;
   k_s = vec4(L[0][0] / v, v * L[1][0], u * L[2][0], u / sin_theta * L[3][0]);
   k = e_tau.yzw;
-  d = (q.x * e_w + q.y * e_h + q.z * e_d).yzw;
+  d = (-length(q) * e_tau + q.x * e_w + q.y * e_h + q.z * e_d).yzw;
 }
 
 #else
@@ -2977,11 +2983,11 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
     float dtheta_dphi = params.w;
     float u_avg = (u1 + u2) * 0.5;
     float dphi_dt = u_avg * sqrt(0.5 * u_avg);
-    float dphi = dphi_dt * p_t;
-    float phi = mod(p_phi - dphi, 2.0 * pi);
-    float s = sin(dtheta_dphi * (phi + dphi) + phi0);
+    float phi = dphi_dt * p_t + phi0;
+    float a = mod(p_phi - phi, 2.0 * pi);
+    float s = sin(dtheta_dphi * (a + phi));
     float r = 1.0 / (u1 + (u2 - u1) * s * s);
-    vec2 d = vec2((phi - pi) / pi, r - p_r);
+    vec2 d = vec2((a - pi) / pi, r - p_r);
     density += smoothstep(1.0, 0.0, length(d));
   }
 
@@ -3006,7 +3012,7 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
 //
 // Inputs:
 // - camera_position: the camera position, in Schwarzschild coordinates
-//     (p^t, p^r, p^theta,p^phi).
+//     (p^t, p^r, p^theta, p^phi).
 // - p: the camera position, in (pseudo-)Cartesian coordinates.
 // - k_s: the camera 4-velocity, in Schwarzschild coordinates.
 // - k: the camera velocity, in (pseudo-)Cartesian coordinates.
@@ -3128,6 +3134,10 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 k, vec3 d) {
 (with respect to a static observer at the current location)">
            Speed: 
            <span id="op_speed"></span>
+         </div>
+         <div title="The g-force experienced by the observer">
+           G-force: 
+           <span id="op_gforce"></span>
          </div>
          <div title="Proper time of the observer, in seconds">
            Local time:
