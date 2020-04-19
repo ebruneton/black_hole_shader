@@ -35,6 +35,8 @@ DEMO_SOURCES := \
 
 demo: output/black_hole/demo/demo.html \
     black_hole_textures black_body_texture doppler_texture gaia_sky_map_texture
+	@echo "Start an HTTP server in output/ (e.g. with python -m SimpleHTTPServer)"
+	@echo "and open http://localhost:8000/black_hole/demo/demo.html"
 
 output/black_hole/demo/demo.html: \
     black_hole/demo/demo.html \

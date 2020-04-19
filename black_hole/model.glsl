@@ -231,11 +231,11 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
     float dtheta_dphi = params.w;
     float u_avg = (u1 + u2) * 0.5;
     float dphi_dt = u_avg * sqrt(0.5 * u_avg);
-    float dphi = dphi_dt * p_t;
-    float phi = mod(p_phi - dphi, 2.0 * pi);
-    float s = sin(dtheta_dphi * (phi + dphi) + phi0);
+    float phi = dphi_dt * p_t + phi0;
+    float a = mod(p_phi - phi, 2.0 * pi);
+    float s = sin(dtheta_dphi * (a + phi));
     float r = 1.0 / (u1 + (u2 - u1) * s * s);
-    vec2 d = vec2((phi - pi) / pi, r - p_r);
+    vec2 d = vec2((a - pi) / pi, r - p_r);
     density += smoothstep(1.0, 0.0, length(d));
   }
 
@@ -260,7 +260,7 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
 //
 // Inputs:
 // - camera_position: the camera position, in Schwarzschild coordinates
-//     (p^t, p^r, p^theta,p^phi).
+//     (p^t, p^r, p^theta, p^phi).
 // - p: the camera position, in (pseudo-)Cartesian coordinates.
 // - k_s: the camera 4-velocity, in Schwarzschild coordinates.
 // - k: the camera velocity, in (pseudo-)Cartesian coordinates.

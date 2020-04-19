@@ -76,7 +76,7 @@ class CameraView {
     document.addEventListener('visibilitychange', (e) => {
       this.hidden = document.hidden;
       if (!this.hidden) {
-        this.frameTime = undefined;
+        this.lastFrameTime = undefined;
         this.onRender();
       }
     });

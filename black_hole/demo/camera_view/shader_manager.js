@@ -47,7 +47,7 @@ const generateDiscParticleParams = function() {
   let ringParams = '';
   let numRings = 0;
   for (let r1 = rMin; r1 < rMax; r1 += 0.2) {
-    const e = 0.3 * Math.random();
+    const e = 0.1 * Math.random();
     const r2 = r1 * (1.0 + e) / (1.0 - e);
     const u1 = 1 / r2;
     const u2 = 1 / r1;
