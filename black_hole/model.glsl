@@ -80,7 +80,7 @@ void InitRay(vec4 camera_position, mat4 camera_orientation, vec3 camera_size,
   p = r * ur.yzw;
   k_s = vec4(L[0][0] / v, v * L[1][0], u * L[2][0], u / sin_theta * L[3][0]);
   k = e_tau.yzw;
-  d = (q.x * e_w + q.y * e_h + q.z * e_d).yzw;
+  d = (-length(q) * e_tau + q.x * e_w + q.y * e_h + q.z * e_d).yzw;
 }
 
 #else
