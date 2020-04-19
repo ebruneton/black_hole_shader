@@ -181,6 +181,7 @@ class Model {
 
     this.blackHoleRadiusMeters = undefined;
     this.speedMetersPerSecond = undefined;
+    this.gForce = undefined;
     this.localElapsedTimeSeconds = 0;
     this.globalElapsedTimeSeconds = 0;
 
@@ -366,10 +367,12 @@ class Model {
     const u = 1 / this.r;
     if (this.state == State.PLAYING) {
       this.speedMetersPerSecond = Math.sqrt(1 - (1 - u) / (e * e)) * C;
+      this.gForce = 0;
       this.timeDilationFactor = e / (1 - u);
     } else {
       const rMeters = this.r * this.blackHoleRadiusMeters;
       this.speedMetersPerSecond = 0;
+      this.gForce = G * M / (rMeters * rMeters * Math.sqrt(1 - u));
       this.timeDilationFactor = 1 / Math.sqrt(1 - u);
     }
   }

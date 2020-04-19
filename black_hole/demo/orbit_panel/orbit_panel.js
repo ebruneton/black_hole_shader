@@ -124,6 +124,7 @@ class OrbitPanel {
     this.blackHoleRadius = rootElement.querySelector('#op_black_hole_radius');
     this.radius = rootElement.querySelector('#op_radius');
     this.speed = rootElement.querySelector('#op_speed');
+    this.gforce = rootElement.querySelector('#op_gforce');
     this.localTime = rootElement.querySelector('#op_local_time');
     this.globalTime = rootElement.querySelector('#op_global_time');
     this.timeDilation = rootElement.querySelector('#op_time_dilation');
@@ -178,6 +179,8 @@ class OrbitPanel {
         `${this.numberFormat.format(radiusMeters / 1000)}km`;
     this.speed.innerText = 
         `${this.numberFormat.format(model.speedMetersPerSecond / 1000)}km/s`;
+    this.gforce.innerText = 
+        `${this.numberFormat.format(model.gForce / 9.80665)}g`;
     this.localTime.innerText = 
         `${model.localElapsedTimeSeconds.toFixed(2)}s`;
     this.globalTime.innerText = 
