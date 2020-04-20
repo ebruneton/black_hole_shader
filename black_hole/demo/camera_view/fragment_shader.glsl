@@ -46,6 +46,7 @@ uniform vec3 disc_params;
 in vec3 p;
 in vec4 k_s;
 in vec3 k;
+in vec3 q;
 in vec3 d;
 
 layout(location = 0) out vec4 frag_color;
@@ -162,6 +163,6 @@ vec4 DiscColor(vec2 p, float t, bool top_side, float doppler_factor) {
 }
 
 void main() {
-  frag_color.rgb = SceneColor(camera_position, p, k_s, k, d);
+  frag_color.rgb = SceneColor(camera_position, p, k_s, k, q, d);
   frag_color.a = 1.0;
 }

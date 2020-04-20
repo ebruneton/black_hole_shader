@@ -46,9 +46,11 @@
 // - p: the camera position, in (pseudo-)Cartesian coordinates.
 // - k_s: the camera 4-velocity, in Schwarzschild coordinates.
 // - k: the camera velocity, in (pseudo-)Cartesian coordinates.
+// - q: the view ray direction, in the camera reference frame.
 // - d: the view ray direction, in (pseudo-)Cartesian coordinates.
 void InitRay(vec4 camera_position, mat4 camera_orientation, vec3 camera_size,
-             vec2 vertex, out vec3 p, out vec4 k_s, out vec3 k, out vec3 d) {
+             vec2 vertex, out vec3 p, out vec4 k_s, out vec3 k, out vec3 q,
+             out vec3 d) {
   float r = camera_position[1];
   float cos_theta = cos(camera_position[2]);
   float sin_theta = sin(camera_position[2]);
@@ -75,7 +77,7 @@ void InitRay(vec4 camera_position, mat4 camera_orientation, vec3 camera_size,
   vec4 e_d = 
       L[0][3] * e_t + L[1][3] * e_r + L[2][3] * e_theta + L[3][3] * e_phi;
 
-  vec3 q = vec3(vertex * camera_size.xy, -camera_size.z);
+  q = vec3(vertex * camera_size.xy, -camera_size.z);
 
   p = r * ur.yzw;
   k_s = vec4(L[0][0] / v, v * L[1][0], u * L[2][0], u / sin_theta * L[3][0]);
@@ -264,8 +266,10 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
 // - p: the camera position, in (pseudo-)Cartesian coordinates.
 // - k_s: the camera 4-velocity, in Schwarzschild coordinates.
 // - k: the camera velocity, in (pseudo-)Cartesian coordinates.
+// - q: the view ray direction, in the camera reference frame.
 // - d: the view ray direction, in (pseudo-)Cartesian coordinates.
-vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 k, vec3 d) {
+vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 k, vec3 q, 
+    vec3 d) {
   vec3 e_x_prime = normalize(p);
   vec3 e_z_prime = normalize(cross(e_x_prime, d));
   vec3 e_y_prime = normalize(cross(e_z_prime, e_x_prime));
@@ -291,20 +295,19 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 k, vec3 d) {
   float g_k_l_receiver = k_s.x * l.x * (1.0 - u) -
       k_s.y * l.y / (1.0 - u) - u * dot(k, e_y_prime) * l.w / (u * u);
 
+  float delta_prime = delta + max(deflection, 0.0);
+  vec3 d_prime = cos(delta_prime) * e_x_prime + sin(delta_prime) * e_y_prime;
+  q = normalize(q);
+
   vec3 color = vec3(0.0, 0.0, 0.0);
   if (deflection >= 0.0) {
     float g_k_l_source = e;
     float doppler_factor = g_k_l_receiver / g_k_l_source;
 
-    float delta_prime = delta + deflection;
-    vec3 d_prime = cos(delta_prime) * e_x_prime + sin(delta_prime) * e_y_prime;
-
-    float lensing_amplification_factor = abs(sin(delta) / sin(delta_prime) /
-        (1.0 + fwidth(deflection) / fwidth(delta)));
-    // Clamp the result (otherwise potentially infinite) and use a hack to avoid
-    // an artefact in the direction opposite to the black hole center.
-    lensing_amplification_factor = 
-        delta < 0.01 ? 1.0 : min(lensing_amplification_factor, 1e6);
+    float lensing_amplification_factor = length(cross(dFdx(q), dFdy(q))) /
+        length(cross(dFdx(d_prime), dFdy(d_prime)));
+    // Clamp the result (otherwise potentially infinite).
+    lensing_amplification_factor = min(lensing_amplification_factor, 1e6);
 
     color += GalaxyColor(d_prime);
     color += StarColor(d_prime, lensing_amplification_factor);

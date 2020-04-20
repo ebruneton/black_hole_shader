@@ -36,10 +36,11 @@ layout(location = 0) in vec4 vertex;
 out vec3 p;
 out vec4 k_s;
 out vec3 k;
+out vec3 q;
 out vec3 d;
 
 void main() {
   InitRay(camera_position, camera_orientation, camera_size, vertex.xy,
-      p, k_s, k, d);
+      p, k_s, k, q, d);
   gl_Position = vertex;
 }
