@@ -394,6 +394,16 @@ const matrixProduct = function(a, b) {
   return c;
 };
 
+const vectorMatrixProduct = function(v, m) {
+  const c = [0, 0, 0, 0];
+  for (let i = 0; i < 4; ++i) {
+    for (let j = 0; j < 4; ++j) {
+      c[i] += v[j] * m[j][i];
+    }
+  }
+  return c;
+};
+
 class Model {
   constructor() {
     this.cameraYaw = 
@@ -460,6 +470,16 @@ class Model {
     // The Lorentz transformation matrix specifying the current camera 
     // orientation and velocity.
     this.lorentz = undefined;
+    // The camera position, in (pseudo-)Cartesian coordinates.
+    this.p = undefined;
+    // The camera 4-velocity, in Schwarzschild coordinates.
+    this.kS = undefined;
+    // The base vectors of the camera reference frame, in (pseudo-)Cartesian
+    // coordinates.
+    this.eTau = undefined;
+    this.eW = undefined;
+    this.eH = undefined;
+    this.eD = undefined;
 
     this.blackHoleRadiusMeters = undefined;
     this.speedMetersPerSecond = undefined;
@@ -533,6 +553,7 @@ class Model {
     this.updateStarsMatrix();
     this.updateCameraCoordinates();
     this.updateCameraLorentzTransform();
+    this.updateCameraReferenceFrame();
     this.updateOrbitInfo();
   }
 
@@ -640,6 +661,33 @@ class Model {
 
     // The final Lorentz transform is the product of the 3 above matrices.
     this.lorentz = matrixProduct(cameraRot, matrixProduct(boost, orbitRot));
+  }
+
+  updateCameraReferenceFrame() {
+    const r = this.r;
+    const cos_theta = Math.cos(this.worldTheta);
+    const sin_theta = Math.sin(this.worldTheta);
+    const cos_phi = Math.cos(this.worldPhi);
+    const sin_phi = Math.sin(this.worldPhi);
+
+    const u = 1 / r;
+    const v = Math.sqrt(1 - u);
+    const ur = [sin_theta * cos_phi, sin_theta * sin_phi, cos_theta];
+
+    const e_t = [1 / v, 0, 0, 0];
+    const e_r = [0, v * ur[0], v * ur[1], v * ur[2]];
+    const e_theta = [0, cos_theta * cos_phi, cos_theta * sin_phi, -sin_theta];
+    const e_phi = [0, -sin_phi, cos_phi, 0];
+
+    const L = this.lorentz;
+    const e_static = [e_t, e_r, e_theta, e_phi];
+    this.eTau = vectorMatrixProduct(L[0], e_static);
+    this.eW = vectorMatrixProduct(L[1], e_static);
+    this.eH = vectorMatrixProduct(L[2], e_static);
+    this.eD = vectorMatrixProduct(L[3], e_static);
+
+    this.p = [r * ur[0], r * ur[1], r * ur[2]];
+    this.kS = [L[0][0] / v, v * L[0][1], u * L[0][2], u / sin_theta * L[0][3]];
   }
 
   updateOrbitInfo() {
@@ -1630,9 +1678,8 @@ class ShaderManager {
     const vertexShader = createShader(
         gl, 
         gl.VERTEX_SHADER,
-        `${header}
-        #define VERTEX_SHADER
-        ${document.querySelector("#black_hole_shader").innerHTML}
+        `#version 300 es
+        precision highp float;
         ${document.querySelector("#vertex_shader").innerHTML}`);
 
     const fragmentShader = createShader(
@@ -1649,12 +1696,22 @@ class ShaderManager {
     gl.linkProgram(program);
     
     program.vertexAttrib = gl.getAttribLocation(program, 'vertex');
-    program.cameraPosition =
-        gl.getUniformLocation(program, 'camera_position');
-    program.cameraOrientation =
-        gl.getUniformLocation(program, 'camera_orientation');
     program.cameraSize =
         gl.getUniformLocation(program, 'camera_size');
+    program.cameraPosition =
+        gl.getUniformLocation(program, 'camera_position');
+    program.p =
+        gl.getUniformLocation(program, 'p');
+    program.kS =
+        gl.getUniformLocation(program, 'k_s');
+    program.eTau =
+        gl.getUniformLocation(program, 'e_tau');
+    program.eW =
+        gl.getUniformLocation(program, 'e_w');
+    program.eH =
+        gl.getUniformLocation(program, 'e_h');
+    program.eD =
+        gl.getUniformLocation(program, 'e_d');
     program.rayDeflectionTexture = 
         gl.getUniformLocation(program, 'ray_deflection_texture');
     program.rayInverseRadiusTexture = 
@@ -1803,17 +1860,21 @@ class CameraView {
     gl.bindTexture(gl.TEXTURE_3D, this.textureManager.dopplerTexture);
 
     gl.useProgram(program);
-    gl.uniform4f(program.cameraPosition, 
-        this.model.t, this.model.r, this.model.worldTheta, this.model.worldPhi);
-    // Transpose matrix since GLSL requires column major order:
-    const lorentz = this.model.lorentz;
-    gl.uniformMatrix4fv(program.cameraOrientation, false,
-        [lorentz[0][0], lorentz[1][0], lorentz[2][0], lorentz[3][0],
-         lorentz[0][1], lorentz[1][1], lorentz[2][1], lorentz[3][1],
-         lorentz[0][2], lorentz[1][2], lorentz[2][2], lorentz[3][2],
-         lorentz[0][3], lorentz[1][3], lorentz[2][3], lorentz[3][3]]);
     gl.uniform3f(program.cameraSize, 
         this.canvas.width / 2, this.canvas.height / 2, focalLength);
+    gl.uniform4f(program.cameraPosition, 
+        this.model.t, this.model.r, this.model.worldTheta, this.model.worldPhi);
+    gl.uniform3f(program.p, this.model.p[0], this.model.p[1], this.model.p[2]);
+    gl.uniform4f(program.kS, 
+        this.model.kS[0], this.model.kS[1], this.model.kS[2], this.model.kS[3]);
+    gl.uniform3f(program.eTau,
+        this.model.eTau[1], this.model.eTau[2], this.model.eTau[3]);
+    gl.uniform3f(program.eW,
+        this.model.eW[1], this.model.eW[2], this.model.eW[3]);
+    gl.uniform3f(program.eH,
+        this.model.eH[1], this.model.eH[2], this.model.eH[3]);
+    gl.uniform3f(program.eD,
+        this.model.eD[1], this.model.eD[2], this.model.eD[3]);
     gl.uniform1i(program.rayDeflectionTexture, 0);
     gl.uniform1i(program.rayInverseRadiusTexture, 1); 
     gl.uniform1i(program.galaxyCubeTexture, 2);
@@ -2463,28 +2524,28 @@ window.addEventListener('DOMContentLoaded', () => {
   <body>
     <script type="x-shader/x-vertex" id="vertex_shader">
 
-uniform vec4 camera_position;
-uniform mat4 camera_orientation;
 uniform vec3 camera_size;
 
 layout(location = 0) in vec4 vertex;
 
-out vec3 p;
-out vec4 k_s;
-out vec3 k;
-out vec3 q;
-out vec3 d;
+out vec3 view_dir;
 
 void main() {
-  InitRay(camera_position, camera_orientation, camera_size, vertex.xy,
-      p, k_s, k, q, d);
+  view_dir = vec3(vertex.xy * camera_size.xy, -camera_size.z);
   gl_Position = vertex;
 }
     </script>
     <script type="x-shader/x-fragment" id="fragment_shader">
 
-// The Schwarzschild camera coordinates (p^t, p^r, p^theta, p^phi).
+// The camera position, in Schwarzschild coordinates (p^t, p^r, p^theta, p^phi).
 uniform vec4 camera_position;
+// The camera position, in (pseudo-)Cartesian coordinates.
+uniform vec3 p;
+// The camera 4-velocity, in Schwarzschild coordinates.
+uniform vec4 k_s;
+// The base vectors of the camera reference frame, in (pseudo-)Cartesian
+// coordinates.
+uniform vec3 e_tau, e_w, e_h, e_d;
 
 uniform sampler2D ray_deflection_texture;
 uniform sampler2D ray_inverse_radius_texture;
@@ -2499,11 +2560,7 @@ uniform sampler2D black_body_texture;
 uniform highp sampler3D doppler_texture;
 uniform vec3 disc_params;
 
-in vec3 p;
-in vec4 k_s;
-in vec3 k;
-in vec3 q;
-in vec3 d;
+in vec3 view_dir;
 
 layout(location = 0) out vec4 frag_color;
 
@@ -2619,7 +2676,8 @@ vec4 DiscColor(vec2 p, float t, bool top_side, float doppler_factor) {
 }
 
 void main() {
-  frag_color.rgb = SceneColor(camera_position, p, k_s, k, q, d);
+  frag_color.rgb =
+      SceneColor(camera_position, p, k_s, e_tau, e_w, e_h, e_d, view_dir);
   frag_color.a = 1.0;
 }
     </script>
@@ -2780,70 +2838,6 @@ Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
   }
   return ray_deflection;
 }
-
-#ifdef VERTEX_SHADER
-
-// -----------------------------------------------------------------------------
-// Ray initialization.
-// -----------------------------------------------------------------------------
-
-// Initializes a ray from the camera position and from pixel coordinates.
-// Inputs:
-// - camera_position: the camera position, in Schwarzschild coordinates
-//   (p^t, p^r, p^theta,p^phi).
-// - camera_orientation: the Lorentz transformation specifying the camera
-//   orientation and velocity.
-// - camera_size: the half width, half height and focal length of the camera.
-// - vertex: the normalized vertex position on screen, in [-1,1]x[-1,1].
-//
-// Outputs:
-// - p: the camera position, in (pseudo-)Cartesian coordinates.
-// - k_s: the camera 4-velocity, in Schwarzschild coordinates.
-// - k: the camera velocity, in (pseudo-)Cartesian coordinates.
-// - q: the view ray direction, in the camera reference frame.
-// - d: the view ray direction, in (pseudo-)Cartesian coordinates.
-void InitRay(vec4 camera_position, mat4 camera_orientation, vec3 camera_size,
-             vec2 vertex, out vec3 p, out vec4 k_s, out vec3 k, out vec3 q,
-             out vec3 d) {
-  float r = camera_position[1];
-  float cos_theta = cos(camera_position[2]);
-  float sin_theta = sin(camera_position[2]);
-  float cos_phi = cos(camera_position[3]);
-  float sin_phi = sin(camera_position[3]);
-
-  float u = 1.0 / r;
-  float v = sqrt(1.0 - u);
-  vec4 ur = vec4(0.0, sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);
-
-  vec4 e_t = vec4(1.0 / v, 0.0, 0.0, 0.0);
-  vec4 e_r = v * ur;
-  vec4 e_theta = 
-      vec4(0.0, cos_theta * cos_phi, cos_theta * sin_phi, -sin_theta);
-  vec4 e_phi = vec4(0.0, -sin_phi, cos_phi, 0.0);
-
-  mat4 L = camera_orientation;
-  vec4 e_tau = 
-      L[0][0] * e_t + L[1][0] * e_r + L[2][0] * e_theta + L[3][0] * e_phi;
-  vec4 e_w = 
-      L[0][1] * e_t + L[1][1] * e_r + L[2][1] * e_theta + L[3][1] * e_phi;
-  vec4 e_h = 
-      L[0][2] * e_t + L[1][2] * e_r + L[2][2] * e_theta + L[3][2] * e_phi;
-  vec4 e_d = 
-      L[0][3] * e_t + L[1][3] * e_r + L[2][3] * e_theta + L[3][3] * e_phi;
-
-  q = vec3(vertex * camera_size.xy, -camera_size.z);
-
-  p = r * ur.yzw;
-  k_s = vec4(L[0][0] / v, v * L[1][0], u * L[2][0], u / sin_theta * L[3][0]);
-  k = e_tau.yzw;
-  d = (-length(q) * e_tau + q.x * e_w + q.y * e_h + q.z * e_d).yzw;
-}
-
-#else
-
-// -----------------------------------------------------------------------------
-// Shading.
-// -----------------------------------------------------------------------------
 
 // Returns the color of a black body of the given temperature. The 1D texture
 // should contain this color at texture coord log(T / 100) / 6.
@@ -3019,11 +3013,14 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
 //     (p^t, p^r, p^theta, p^phi).
 // - p: the camera position, in (pseudo-)Cartesian coordinates.
 // - k_s: the camera 4-velocity, in Schwarzschild coordinates.
-// - k: the camera velocity, in (pseudo-)Cartesian coordinates.
-// - q: the view ray direction, in the camera reference frame.
-// - d: the view ray direction, in (pseudo-)Cartesian coordinates.
-vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 k, vec3 q, 
-    vec3 d) {
+// - e_tau, e_w, e_h, e_d: the base vectors of the camera reference frame, in
+//     (pseudo-)Cartesian coordinates.
+// - view_dir: the view ray direction, in the camera reference frame.
+vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 e_tau, vec3 e_w,
+    vec3 e_h, vec3 e_d, vec3 view_dir) {
+  vec3 q = normalize(view_dir);
+  vec3 d = -e_tau + q.x * e_w + q.y * e_h + q.z * e_d;
+
   vec3 e_x_prime = normalize(p);
   vec3 e_z_prime = normalize(cross(e_x_prime, d));
   vec3 e_y_prime = normalize(cross(e_z_prime, e_x_prime));
@@ -3047,11 +3044,10 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 k, vec3 q,
 
   vec4 l = vec4(e / (1.0 - u), -u_prime, 0.0, u * u);
   float g_k_l_receiver = k_s.x * l.x * (1.0 - u) -
-      k_s.y * l.y / (1.0 - u) - u * dot(k, e_y_prime) * l.w / (u * u);
+      k_s.y * l.y / (1.0 - u) - u * dot(e_tau, e_y_prime) * l.w / (u * u);
 
   float delta_prime = delta + max(deflection, 0.0);
   vec3 d_prime = cos(delta_prime) * e_x_prime + sin(delta_prime) * e_y_prime;
-  q = normalize(q);
 
   vec3 color = vec3(0.0, 0.0, 0.0);
   if (deflection >= 0.0) {
@@ -3093,8 +3089,6 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 k, vec3 q,
   }
   return color;
 }
-
-#endif
     </script>
     <div class="cv-container">
       <canvas id="camera_view" width="400" height="300"></canvas>
