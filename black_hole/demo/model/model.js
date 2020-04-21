@@ -112,6 +112,16 @@ const matrixProduct = function(a, b) {
   return c;
 };
 
+const vectorMatrixProduct = function(v, m) {
+  const c = [0, 0, 0, 0];
+  for (let i = 0; i < 4; ++i) {
+    for (let j = 0; j < 4; ++j) {
+      c[i] += v[j] * m[j][i];
+    }
+  }
+  return c;
+};
+
 class Model {
   constructor() {
     this.cameraYaw = 
@@ -178,6 +188,16 @@ class Model {
     // The Lorentz transformation matrix specifying the current camera 
     // orientation and velocity.
     this.lorentz = undefined;
+    // The camera position, in (pseudo-)Cartesian coordinates.
+    this.p = undefined;
+    // The camera 4-velocity, in Schwarzschild coordinates.
+    this.kS = undefined;
+    // The base vectors of the camera reference frame, in (pseudo-)Cartesian
+    // coordinates.
+    this.eTau = undefined;
+    this.eW = undefined;
+    this.eH = undefined;
+    this.eD = undefined;
 
     this.blackHoleRadiusMeters = undefined;
     this.speedMetersPerSecond = undefined;
@@ -251,6 +271,7 @@ class Model {
     this.updateStarsMatrix();
     this.updateCameraCoordinates();
     this.updateCameraLorentzTransform();
+    this.updateCameraReferenceFrame();
     this.updateOrbitInfo();
   }
 
@@ -358,6 +379,33 @@ class Model {
 
     // The final Lorentz transform is the product of the 3 above matrices.
     this.lorentz = matrixProduct(cameraRot, matrixProduct(boost, orbitRot));
+  }
+
+  updateCameraReferenceFrame() {
+    const r = this.r;
+    const cos_theta = Math.cos(this.worldTheta);
+    const sin_theta = Math.sin(this.worldTheta);
+    const cos_phi = Math.cos(this.worldPhi);
+    const sin_phi = Math.sin(this.worldPhi);
+
+    const u = 1 / r;
+    const v = Math.sqrt(1 - u);
+    const ur = [sin_theta * cos_phi, sin_theta * sin_phi, cos_theta];
+
+    const e_t = [1 / v, 0, 0, 0];
+    const e_r = [0, v * ur[0], v * ur[1], v * ur[2]];
+    const e_theta = [0, cos_theta * cos_phi, cos_theta * sin_phi, -sin_theta];
+    const e_phi = [0, -sin_phi, cos_phi, 0];
+
+    const L = this.lorentz;
+    const e_static = [e_t, e_r, e_theta, e_phi];
+    this.eTau = vectorMatrixProduct(L[0], e_static);
+    this.eW = vectorMatrixProduct(L[1], e_static);
+    this.eH = vectorMatrixProduct(L[2], e_static);
+    this.eD = vectorMatrixProduct(L[3], e_static);
+
+    this.p = [r * ur[0], r * ur[1], r * ur[2]];
+    this.kS = [L[0][0] / v, v * L[0][1], u * L[0][2], u / sin_theta * L[0][3]];
   }
 
   updateOrbitInfo() {

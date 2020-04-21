@@ -128,9 +128,8 @@ class ShaderManager {
     const vertexShader = createShader(
         gl, 
         gl.VERTEX_SHADER,
-        `${header}
-        #define VERTEX_SHADER
-        ${document.querySelector("#black_hole_shader").innerHTML}
+        `#version 300 es
+        precision highp float;
         ${document.querySelector("#vertex_shader").innerHTML}`);
 
     const fragmentShader = createShader(
@@ -147,12 +146,22 @@ class ShaderManager {
     gl.linkProgram(program);
     
     program.vertexAttrib = gl.getAttribLocation(program, 'vertex');
-    program.cameraPosition =
-        gl.getUniformLocation(program, 'camera_position');
-    program.cameraOrientation =
-        gl.getUniformLocation(program, 'camera_orientation');
     program.cameraSize =
         gl.getUniformLocation(program, 'camera_size');
+    program.cameraPosition =
+        gl.getUniformLocation(program, 'camera_position');
+    program.p =
+        gl.getUniformLocation(program, 'p');
+    program.kS =
+        gl.getUniformLocation(program, 'k_s');
+    program.eTau =
+        gl.getUniformLocation(program, 'e_tau');
+    program.eW =
+        gl.getUniformLocation(program, 'e_w');
+    program.eH =
+        gl.getUniformLocation(program, 'e_h');
+    program.eD =
+        gl.getUniformLocation(program, 'e_d');
     program.rayDeflectionTexture = 
         gl.getUniformLocation(program, 'ray_deflection_texture');
     program.rayInverseRadiusTexture = 

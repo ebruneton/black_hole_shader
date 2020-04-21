@@ -145,17 +145,21 @@ class CameraView {
     gl.bindTexture(gl.TEXTURE_3D, this.textureManager.dopplerTexture);
 
     gl.useProgram(program);
-    gl.uniform4f(program.cameraPosition, 
-        this.model.t, this.model.r, this.model.worldTheta, this.model.worldPhi);
-    // Transpose matrix since GLSL requires column major order:
-    const lorentz = this.model.lorentz;
-    gl.uniformMatrix4fv(program.cameraOrientation, false,
-        [lorentz[0][0], lorentz[1][0], lorentz[2][0], lorentz[3][0],
-         lorentz[0][1], lorentz[1][1], lorentz[2][1], lorentz[3][1],
-         lorentz[0][2], lorentz[1][2], lorentz[2][2], lorentz[3][2],
-         lorentz[0][3], lorentz[1][3], lorentz[2][3], lorentz[3][3]]);
     gl.uniform3f(program.cameraSize, 
         this.canvas.width / 2, this.canvas.height / 2, focalLength);
+    gl.uniform4f(program.cameraPosition, 
+        this.model.t, this.model.r, this.model.worldTheta, this.model.worldPhi);
+    gl.uniform3f(program.p, this.model.p[0], this.model.p[1], this.model.p[2]);
+    gl.uniform4f(program.kS, 
+        this.model.kS[0], this.model.kS[1], this.model.kS[2], this.model.kS[3]);
+    gl.uniform3f(program.eTau,
+        this.model.eTau[1], this.model.eTau[2], this.model.eTau[3]);
+    gl.uniform3f(program.eW,
+        this.model.eW[1], this.model.eW[2], this.model.eW[3]);
+    gl.uniform3f(program.eH,
+        this.model.eH[1], this.model.eH[2], this.model.eH[3]);
+    gl.uniform3f(program.eD,
+        this.model.eD[1], this.model.eD[2], this.model.eD[3]);
     gl.uniform1i(program.rayDeflectionTexture, 0);
     gl.uniform1i(program.rayInverseRadiusTexture, 1); 
     gl.uniform1i(program.galaxyCubeTexture, 2);

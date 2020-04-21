@@ -27,70 +27,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef VERTEX_SHADER
-
-// -----------------------------------------------------------------------------
-// Ray initialization.
-// -----------------------------------------------------------------------------
-
-// Initializes a ray from the camera position and from pixel coordinates.
-// Inputs:
-// - camera_position: the camera position, in Schwarzschild coordinates
-//   (p^t, p^r, p^theta,p^phi).
-// - camera_orientation: the Lorentz transformation specifying the camera
-//   orientation and velocity.
-// - camera_size: the half width, half height and focal length of the camera.
-// - vertex: the normalized vertex position on screen, in [-1,1]x[-1,1].
-//
-// Outputs:
-// - p: the camera position, in (pseudo-)Cartesian coordinates.
-// - k_s: the camera 4-velocity, in Schwarzschild coordinates.
-// - k: the camera velocity, in (pseudo-)Cartesian coordinates.
-// - q: the view ray direction, in the camera reference frame.
-// - d: the view ray direction, in (pseudo-)Cartesian coordinates.
-void InitRay(vec4 camera_position, mat4 camera_orientation, vec3 camera_size,
-             vec2 vertex, out vec3 p, out vec4 k_s, out vec3 k, out vec3 q,
-             out vec3 d) {
-  float r = camera_position[1];
-  float cos_theta = cos(camera_position[2]);
-  float sin_theta = sin(camera_position[2]);
-  float cos_phi = cos(camera_position[3]);
-  float sin_phi = sin(camera_position[3]);
-
-  float u = 1.0 / r;
-  float v = sqrt(1.0 - u);
-  vec4 ur = vec4(0.0, sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);
-
-  vec4 e_t = vec4(1.0 / v, 0.0, 0.0, 0.0);
-  vec4 e_r = v * ur;
-  vec4 e_theta = 
-      vec4(0.0, cos_theta * cos_phi, cos_theta * sin_phi, -sin_theta);
-  vec4 e_phi = vec4(0.0, -sin_phi, cos_phi, 0.0);
-
-  mat4 L = camera_orientation;
-  vec4 e_tau = 
-      L[0][0] * e_t + L[1][0] * e_r + L[2][0] * e_theta + L[3][0] * e_phi;
-  vec4 e_w = 
-      L[0][1] * e_t + L[1][1] * e_r + L[2][1] * e_theta + L[3][1] * e_phi;
-  vec4 e_h = 
-      L[0][2] * e_t + L[1][2] * e_r + L[2][2] * e_theta + L[3][2] * e_phi;
-  vec4 e_d = 
-      L[0][3] * e_t + L[1][3] * e_r + L[2][3] * e_theta + L[3][3] * e_phi;
-
-  q = vec3(vertex * camera_size.xy, -camera_size.z);
-
-  p = r * ur.yzw;
-  k_s = vec4(L[0][0] / v, v * L[1][0], u * L[2][0], u / sin_theta * L[3][0]);
-  k = e_tau.yzw;
-  d = (-length(q) * e_tau + q.x * e_w + q.y * e_h + q.z * e_d).yzw;
-}
-
-#else
-
-// -----------------------------------------------------------------------------
-// Shading.
-// -----------------------------------------------------------------------------
-
 // Returns the color of a black body of the given temperature. The 1D texture
 // should contain this color at texture coord log(T / 100) / 6.
 vec3 BlackBodyColor(sampler2D black_body_texture, float temperature) {
@@ -265,11 +201,14 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
 //     (p^t, p^r, p^theta, p^phi).
 // - p: the camera position, in (pseudo-)Cartesian coordinates.
 // - k_s: the camera 4-velocity, in Schwarzschild coordinates.
-// - k: the camera velocity, in (pseudo-)Cartesian coordinates.
-// - q: the view ray direction, in the camera reference frame.
-// - d: the view ray direction, in (pseudo-)Cartesian coordinates.
-vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 k, vec3 q, 
-    vec3 d) {
+// - e_tau, e_w, e_h, e_d: the base vectors of the camera reference frame, in
+//     (pseudo-)Cartesian coordinates.
+// - view_dir: the view ray direction, in the camera reference frame.
+vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 e_tau, vec3 e_w,
+    vec3 e_h, vec3 e_d, vec3 view_dir) {
+  vec3 q = normalize(view_dir);
+  vec3 d = -e_tau + q.x * e_w + q.y * e_h + q.z * e_d;
+
   vec3 e_x_prime = normalize(p);
   vec3 e_z_prime = normalize(cross(e_x_prime, d));
   vec3 e_y_prime = normalize(cross(e_z_prime, e_x_prime));
@@ -293,11 +232,10 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 k, vec3 q,
 
   vec4 l = vec4(e / (1.0 - u), -u_prime, 0.0, u * u);
   float g_k_l_receiver = k_s.x * l.x * (1.0 - u) -
-      k_s.y * l.y / (1.0 - u) - u * dot(k, e_y_prime) * l.w / (u * u);
+      k_s.y * l.y / (1.0 - u) - u * dot(e_tau, e_y_prime) * l.w / (u * u);
 
   float delta_prime = delta + max(deflection, 0.0);
   vec3 d_prime = cos(delta_prime) * e_x_prime + sin(delta_prime) * e_y_prime;
-  q = normalize(q);
 
   vec3 color = vec3(0.0, 0.0, 0.0);
   if (deflection >= 0.0) {
@@ -339,5 +277,3 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 k, vec3 q,
   }
   return color;
 }
-
-#endif

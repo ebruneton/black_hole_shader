@@ -27,8 +27,15 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// The Schwarzschild camera coordinates (p^t, p^r, p^theta, p^phi).
+// The camera position, in Schwarzschild coordinates (p^t, p^r, p^theta, p^phi).
 uniform vec4 camera_position;
+// The camera position, in (pseudo-)Cartesian coordinates.
+uniform vec3 p;
+// The camera 4-velocity, in Schwarzschild coordinates.
+uniform vec4 k_s;
+// The base vectors of the camera reference frame, in (pseudo-)Cartesian
+// coordinates.
+uniform vec3 e_tau, e_w, e_h, e_d;
 
 uniform sampler2D ray_deflection_texture;
 uniform sampler2D ray_inverse_radius_texture;
@@ -43,11 +50,7 @@ uniform sampler2D black_body_texture;
 uniform highp sampler3D doppler_texture;
 uniform vec3 disc_params;
 
-in vec3 p;
-in vec4 k_s;
-in vec3 k;
-in vec3 q;
-in vec3 d;
+in vec3 view_dir;
 
 layout(location = 0) out vec4 frag_color;
 
@@ -163,6 +166,7 @@ vec4 DiscColor(vec2 p, float t, bool top_side, float doppler_factor) {
 }
 
 void main() {
-  frag_color.rgb = SceneColor(camera_position, p, k_s, k, q, d);
+  frag_color.rgb =
+      SceneColor(camera_position, p, k_s, e_tau, e_w, e_h, e_d, view_dir);
   frag_color.a = 1.0;
 }

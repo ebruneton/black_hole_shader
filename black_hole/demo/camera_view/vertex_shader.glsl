@@ -27,20 +27,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-uniform vec4 camera_position;
-uniform mat4 camera_orientation;
 uniform vec3 camera_size;
 
 layout(location = 0) in vec4 vertex;
 
-out vec3 p;
-out vec4 k_s;
-out vec3 k;
-out vec3 q;
-out vec3 d;
+out vec3 view_dir;
 
 void main() {
-  InitRay(camera_position, camera_orientation, camera_size, vertex.xy,
-      p, k_s, k, q, d);
+  view_dir = vec3(vertex.xy * camera_size.xy, -camera_size.z);
   gl_Position = vertex;
 }
