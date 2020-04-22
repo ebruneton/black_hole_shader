@@ -175,10 +175,6 @@ html, body {
   font-weight: bold;
 }
 
-.sp-hidden {
-  display: none;
-}
-
 .sp-settings-container {
   padding-left: 8px;
 }
@@ -306,6 +302,10 @@ html, body {
   display: none;
 }
 
+.sp-hidden {
+  display: none;
+}
+
     </style>
     <script>
 
@@ -414,6 +414,8 @@ class Model {
         new QuantizedValue(this, (x) => Math.pow(10, 3 * x - 3), 500);
     this.bloom = 
         new QuantizedValue(this, (x) => x, 500);
+    this.highDefinition =
+        new BooleanValue(this, false);
     this.startRadius = 
         new QuantizedValue(this, (x) => Math.max(1 + 39 * x * x, 1.01), 940);
     this.startDirection = 
@@ -765,6 +767,7 @@ class UrlParams {
     this.params.push(new IntParam('cp', model.cameraPitch));
     this.params.push(new IntParam('ce', model.exposure));
     this.params.push(new IntParam('cb', model.bloom));
+    this.params.push(new BoolParam('hd', model.highDefinition));
     this.params.push(new IntParam('or', model.startRadius));
     this.params.push(new IntParam('od', model.startDirection));
     this.params.push(new IntParam('os', model.startSpeed));
@@ -1756,11 +1759,12 @@ class CameraView {
   constructor(model, rootElement) {
     this.model = model;
     this.rootElement = rootElement;
+    this.devicePixelRatio = this.getDevicePixelRatio();
     this.canvas = rootElement.querySelector('#camera_view');
     this.canvas.style.width = `${rootElement.clientWidth}px`;
     this.canvas.style.height = `${rootElement.clientHeight}px`;
-    this.canvas.width = rootElement.clientWidth * window.devicePixelRatio;
-    this.canvas.height = rootElement.clientHeight * window.devicePixelRatio;
+    this.canvas.width = rootElement.clientWidth * this.devicePixelRatio;
+    this.canvas.height = rootElement.clientHeight * this.devicePixelRatio;
     this.errorPanel = rootElement.querySelector('#cv_error_panel');
     this.errorPanelShown = false;
 
@@ -1824,6 +1828,9 @@ class CameraView {
     if (!program) {
       requestAnimationFrame(() => this.onRender());
       return;
+    }
+    if (this.devicePixelRatio != this.getDevicePixelRatio()) {
+      this.onResize();      
     }
 
     const kFovY = 50 / 180 * Math.PI;
@@ -1960,12 +1967,17 @@ class CameraView {
 
   onResize(event) {
     const rootElement = this.rootElement;
+    this.devicePixelRatio = this.getDevicePixelRatio();
     this.canvas.style.width = `${rootElement.clientWidth}px`;
     this.canvas.style.height = `${rootElement.clientHeight}px`;
-    this.canvas.width = rootElement.clientWidth * window.devicePixelRatio;
-    this.canvas.height = rootElement.clientHeight * window.devicePixelRatio;
+    this.canvas.width = rootElement.clientWidth * this.devicePixelRatio;
+    this.canvas.height = rootElement.clientHeight * this.devicePixelRatio;
     this.bloom.resize(this.canvas.width, this.canvas.height);
   }
+
+  getDevicePixelRatio() {
+    return this.model.highDefinition.getValue() ? window.devicePixelRatio : 1;
+  }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -2368,10 +2380,18 @@ class SettingsPanel {
     this.model = model;
     this.model.addListener(this);
 
+    if (window.devicePixelRatio <= 1) {
+      const highDefinitionDiv =
+          this.rootElement.querySelector('#sp_high_definition_div');
+      highDefinitionDiv.classList.toggle('sp-hidden', true);
+    }
+
     this.exposure =
         new Slider(rootElement, 'exposure', model.exposure);
     this.bloom = 
         new Slider(rootElement, 'bloom', model.bloom);
+    this.highDefinition =
+        new Checkbox(rootElement, 'high_definition', model.highDefinition);
     this.startRadius = 
         new Slider(rootElement, 'start_radius', model.startRadius);
     this.startDirection = 
@@ -2427,6 +2447,7 @@ class SettingsPanel {
   onSettingsChange() {
     this.exposure.update((v) => `${(Math.log2(v * 1000)).toPrecision(3)}`);
     this.bloom.update((v) => `${(v * 100).toFixed(0)}%`);
+    this.highDefinition.update();
     this.startRadius.update((v) => `${v.toPrecision(3)}`);
     this.startDirection.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);
     this.startSpeed.update((v) => `${v.toPrecision(3)}`);
@@ -3183,6 +3204,13 @@ Shortcut keys: '+' / '-' to increase / decrease exposure.">
           <span id="sp_bloom_value" class="sp-value"></span>
         </div>
 
+        <div class="sp-setting" 
+             title="Enables a higher image resolution (decreases performance)"
+             id="sp_high_definition_div">
+          <label for="sp_high_definition">High Definition</label>
+          <input type="checkbox" id="sp_high_definition">
+        </div>
+
         <h3>Orbit</h3>
 
         <div class="sp-settings-container">
@@ -3259,14 +3287,14 @@ Shortcut key: 'p'">⏸</button>
 
         <div class="sp-setting" 
              title="Enables the bending of light by the gravitational field">
-          <label for="lensing">Lensing</label>
-          <input type="checkbox" name="lensing" id="sp_lensing">
+          <label for="sp_lensing">Lensing</label>
+          <input type="checkbox" id="sp_lensing">
         </div>
 
         <div class="sp-setting"
              title="Enables the relativistic and gravitational Doppler and beaming effects">
-          <label for="doppler">Doppler</label>
-          <input type="checkbox" name="doppler" id="sp_doppler">
+          <label for="sp_doppler">Doppler</label>
+          <input type="checkbox" id="sp_doppler">
         </div>
       </details>
 
@@ -3278,8 +3306,8 @@ Shortcut key: 'p'">⏸</button>
         <div class="sp-setting" 
              title="Enables non-realistic grid patterns
 (to better illustrate the physical phenomena)">
-          <label for="grid">Grid</label>
-          <input type="checkbox" name="grid" id="sp_grid">
+          <label for="sp_grid">Grid</label>
+          <input type="checkbox" id="sp_grid">
         </div>
 
         <div class="sp-setting" 
@@ -3374,8 +3402,8 @@ Shortcut: CTRL + mouse drag">
 
           <div class="sp-setting sp-last" 
                title="Enables stars">
-            <label for="stars">Enabled</label>
-            <input type="checkbox" name="stars" id="sp_stars" checked>
+            <label for="sp_stars">Enabled</label>
+            <input type="checkbox" id="sp_stars" checked>
           </div>
 
         </div>
