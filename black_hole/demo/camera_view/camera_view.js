@@ -41,11 +41,12 @@ class CameraView {
   constructor(model, rootElement) {
     this.model = model;
     this.rootElement = rootElement;
+    this.devicePixelRatio = this.getDevicePixelRatio();
     this.canvas = rootElement.querySelector('#camera_view');
     this.canvas.style.width = `${rootElement.clientWidth}px`;
     this.canvas.style.height = `${rootElement.clientHeight}px`;
-    this.canvas.width = rootElement.clientWidth * window.devicePixelRatio;
-    this.canvas.height = rootElement.clientHeight * window.devicePixelRatio;
+    this.canvas.width = rootElement.clientWidth * this.devicePixelRatio;
+    this.canvas.height = rootElement.clientHeight * this.devicePixelRatio;
     this.errorPanel = rootElement.querySelector('#cv_error_panel');
     this.errorPanelShown = false;
 
@@ -109,6 +110,9 @@ class CameraView {
     if (!program) {
       requestAnimationFrame(() => this.onRender());
       return;
+    }
+    if (this.devicePixelRatio != this.getDevicePixelRatio()) {
+      this.onResize();      
     }
 
     const kFovY = 50 / 180 * Math.PI;
@@ -245,12 +249,17 @@ class CameraView {
 
   onResize(event) {
     const rootElement = this.rootElement;
+    this.devicePixelRatio = this.getDevicePixelRatio();
     this.canvas.style.width = `${rootElement.clientWidth}px`;
     this.canvas.style.height = `${rootElement.clientHeight}px`;
-    this.canvas.width = rootElement.clientWidth * window.devicePixelRatio;
-    this.canvas.height = rootElement.clientHeight * window.devicePixelRatio;
+    this.canvas.width = rootElement.clientWidth * this.devicePixelRatio;
+    this.canvas.height = rootElement.clientHeight * this.devicePixelRatio;
     this.bloom.resize(this.canvas.width, this.canvas.height);
   }
+
+  getDevicePixelRatio() {
+    return this.model.highDefinition.getValue() ? window.devicePixelRatio : 1;
+  }
 }
 
 window.addEventListener('DOMContentLoaded', () => {

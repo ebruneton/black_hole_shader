@@ -125,10 +125,18 @@ class SettingsPanel {
     this.model = model;
     this.model.addListener(this);
 
+    if (window.devicePixelRatio <= 1) {
+      const highDefinitionDiv =
+          this.rootElement.querySelector('#sp_high_definition_div');
+      highDefinitionDiv.classList.toggle('sp-hidden', true);
+    }
+
     this.exposure =
         new Slider(rootElement, 'exposure', model.exposure);
     this.bloom = 
         new Slider(rootElement, 'bloom', model.bloom);
+    this.highDefinition =
+        new Checkbox(rootElement, 'high_definition', model.highDefinition);
     this.startRadius = 
         new Slider(rootElement, 'start_radius', model.startRadius);
     this.startDirection = 
@@ -184,6 +192,7 @@ class SettingsPanel {
   onSettingsChange() {
     this.exposure.update((v) => `${(Math.log2(v * 1000)).toPrecision(3)}`);
     this.bloom.update((v) => `${(v * 100).toFixed(0)}%`);
+    this.highDefinition.update();
     this.startRadius.update((v) => `${v.toPrecision(3)}`);
     this.startDirection.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);
     this.startSpeed.update((v) => `${v.toPrecision(3)}`);

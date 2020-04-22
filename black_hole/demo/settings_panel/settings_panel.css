@@ -45,10 +45,6 @@
   font-weight: bold;
 }
 
-.sp-hidden {
-  display: none;
-}
-
 .sp-settings-container {
   padding-left: 8px;
 }
@@ -173,6 +169,10 @@
 .sp-panel.sp-playing .sp-play,
 .sp-panel:not(.sp-playing) .sp-pause,
 .sp-panel:not(.sp-playing) .sp-stop {
+  display: none;
+}
+
+.sp-hidden {
   display: none;
 }
 

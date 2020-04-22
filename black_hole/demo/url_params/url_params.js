@@ -80,6 +80,7 @@ class UrlParams {
     this.params.push(new IntParam('cp', model.cameraPitch));
     this.params.push(new IntParam('ce', model.exposure));
     this.params.push(new IntParam('cb', model.bloom));
+    this.params.push(new BoolParam('hd', model.highDefinition));
     this.params.push(new IntParam('or', model.startRadius));
     this.params.push(new IntParam('od', model.startDirection));
     this.params.push(new IntParam('os', model.startSpeed));
