@@ -219,8 +219,8 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 e_tau, vec3 e_w,
     t = -t;
   }
 
-  float alpha = acos(dot(e_x_prime, t));
-  float delta = acos(dot(e_x_prime, normalize(d)));
+  float alpha = acos(clamp(dot(e_x_prime, t), -1.0, 1.0));
+  float delta = acos(clamp(dot(e_x_prime, normalize(d)), -1.0, 1.0));
 
   float u0, phi0, t0, u1, phi1, t1;
   float deflection = RayTrace(camera_position[1], delta, alpha,

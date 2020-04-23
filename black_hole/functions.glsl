@@ -137,11 +137,13 @@ Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
   phi0 = mod(phi, pi);
   TimedInverseDistance ui =
       LookupRayInverseRadius(ray_inverse_radius_texture, e_square, phi0);
-  if (phi0 < phi_apsis && ui.x >= u_min && ui.x <= u_max &&
-      (sign(ui.x - u) == s)) {
-    u0 = ui.x;
-    phi0 = alpha + phi - phi0;
-    t0 = s * (ui.y - deflection.y);
+  if (phi0 < phi_apsis && ui.x >= u_min && ui.x <= u_max) {
+    Real side = s * (ui.x - u);
+    if (side > 1e-3 || (side > -1e-3 && alpha < delta)) {
+      u0 = ui.x;
+      phi0 = alpha + phi - phi0;
+      t0 = s * (ui.y - deflection.y);
+    }
   }
   if (e_square < kMu && s == 1.0) {
     phi = 2.0 * phi_apsis - phi;
