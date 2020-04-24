@@ -423,7 +423,7 @@ class Model {
     this.startSpeed = 
         new QuantizedValue(this, (x) => Math.min(x * x, 0.99), 347);
     this.orbitInclination = 
-        new QuantizedValue(this, (x) => Math.PI * (x - 0.5), 970, 1800);
+        new QuantizedValue(this, (x) => Math.PI * (x - 0.5), 970, 1799);
     this.lensing =
         new BooleanValue(this, true);
     this.doppler =
@@ -2587,9 +2587,9 @@ layout(location = 0) out vec4 frag_color;
 
 // Simple ray-tracing function to compute the intersections of a ray with the
 // scene, when the space-time geometry is assumed to be flat.
-float TraceRayEuclidean(float p_r, float delta, float alpha, float u_min, 
-    float u_max, out float u0, out float phi0, out float t0, out float u1, 
-    out float phi1, out float t1) {
+float TraceRayEuclidean(float p_r, float delta, float alpha, float u_min,
+                        float u_max, out float u0, out float phi0, out float t0,
+                        out float u1, out float phi1, out float t1) {
   float cos_delta = cos(delta);
   float sin_delta = sin(delta);
   float tan_alpha = tan(alpha);
@@ -2599,7 +2599,7 @@ float TraceRayEuclidean(float p_r, float delta, float alpha, float u_min,
   u1 = -1.0;
   float t = p_r / (sin_delta / tan_alpha - cos_delta);
   float r = length(vec2(p_r + t * cos_delta, t * sin_delta));
-  if (t >= 0.0 && r * u_min <= 1.0 && r * u_max >= 1.0 && 
+  if (t >= 0.0 && r * u_min <= 1.0 && r * u_max >= 1.0 &&
       (deflection == 0.0 || t < p_r)) {
     u0 = 1.0 / r;
     phi0 = alpha;
@@ -2608,15 +2608,19 @@ float TraceRayEuclidean(float p_r, float delta, float alpha, float u_min,
   return deflection;
 }
 
-float RayTrace(float p_r, float delta, float alpha, float u_min, float u_max, 
-               out float u0, out float phi0, out float t0, 
-               out float u1, out float phi1, out float t1) {
+float RayTrace(float u, float u_prime, float e_square, float delta, float alpha,
+               float u_min, float u_max, out float u0, out float phi0,
+               out float t0, out float alpha0, out float u1, out float phi1,
+               out float t1, out float alpha1) {
 #if (LENSING == 1)
-  return TraceRay(ray_deflection_texture, ray_inverse_radius_texture,
-      p_r, delta, alpha, u_min, u_max, u0, phi0, t0, u1, phi1, t1);
+  return TraceRay(ray_deflection_texture, ray_inverse_radius_texture, u,
+                  u_prime, e_square, delta, alpha, u_min, u_max, u0, phi0, t0,
+                  alpha0, u1, phi1, t1, alpha1);
 #else
-  return TraceRayEuclidean(
-      p_r, delta, alpha, u_min, u_max, u0, phi0, t0, u1, phi1, t1);
+  alpha0 = 1.0;
+  alpha1 = 1.0;
+  return TraceRayEuclidean(1.0 / u, delta, alpha, u_min, u_max, u0, phi0, t0,
+                           u1, phi1, t1);
 #endif
 }
 
@@ -2667,13 +2671,16 @@ vec3 Doppler(vec3 rgb, float doppler_factor) {
 }
 
 vec4 GridDiscColor(vec2 p, float t, bool top_side, float doppler_factor,
-    float temperature, sampler2D black_body_texture) {
+                   float temperature, sampler2D black_body_texture) {
   float p_r = length(p);
+  if (p_r <= INNER_DISC_R || p_r >= OUTER_DISC_R) {
+    return vec4(0.0);
+  }
   const float uM = 1.0 / 6.0;
   const float dphi_dt = uM * sqrt(0.5 * uM) / (2.0 * pi);
   float p_phi = atan(p.y, p.x) - t * dphi_dt;
   float value_phi = mod(p_phi / pi * 16.0, 1.0) < 0.2 ? 0.0 : 1.0;
-  float value_r = mod(p_r / 2.0, 1.0) < 0.2 ? 0.0 : 1.0; 
+  float value_r = mod(p_r / 2.0, 1.0) < 0.2 ? 0.0 : 1.0;
   vec3 color = BlackBodyColor(black_body_texture, temperature * doppler_factor);
   color *= 0.2 + 0.8 * value_phi * value_r;
   return vec4(top_side ? color : color * 0.01, 1.0);
@@ -2687,11 +2694,11 @@ vec4 DiscColor(vec2 p, float t, bool top_side, float doppler_factor) {
   doppler_factor = 1.0;
 #endif
 #if (GRID == 1)
-  vec4 color = GridDiscColor(
-      p, t, top_side, doppler_factor, temperature, black_body_texture);
+  vec4 color = GridDiscColor(p, t, top_side, doppler_factor, temperature,
+                             black_body_texture);
 #else
-  vec4 color = DefaultDiscColor(
-      p, t, top_side, doppler_factor, temperature, black_body_texture);
+  vec4 color = DefaultDiscColor(p, t, top_side, doppler_factor, temperature,
+                                black_body_texture);
 #endif
   return vec4(density * color.rgb, opacity * color.a);
 }
@@ -2805,16 +2812,23 @@ TimedInverseDistance LookupRayInverseRadius(IN(RayInverseRadiusTexture)
 // (and at most 4 texture lookups).
 // -----------------------------------------------------------------------------
 
+// Anti-aliased pulse function. See
+// https://renderman.pixar.com/resources/RenderMan_20/basicAntialiasing.html.
+Real FilteredPulse(Real edge0, Real edge1, Real x, Real fw) {
+  fw = max(fw, 1e-6);
+  Real x0 = x - fw * 0.5;
+  Real x1 = x0 + fw;
+  return max(0.0, (min(x1, edge1) - max(x0, edge0)) / fw);
+}
+
 Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
                IN(RayInverseRadiusTexture) ray_inverse_radius_texture,
-               const Real p_r, const Angle delta, const Angle alpha,
-               const Real u_min, const Real u_max, OUT(Real) u0,
-               OUT(Angle) phi0, OUT(Real) t0, OUT(Real) u1, OUT(Angle) phi1,
-               OUT(Real) t1) {
+               const Real u, const Real u_prime, const Real e_square,
+               const Angle delta, const Angle alpha, const Real u_min,
+               const Real u_max, OUT(Real) u0, OUT(Angle) phi0, OUT(Real) t0,
+               OUT(Real) alpha0, OUT(Real) u1, OUT(Angle) phi1, OUT(Real) t1,
+               OUT(Real) alpha1) {
   // Compute the ray deflection.
-  Real u = 1.0 / p_r;
-  Real u_prime = -u / tan(delta);
-  Real e_square = u_prime * u_prime + u * u * (1.0 - u);
   u0 = -1.0;
   u1 = -1.0;
   if (e_square < kMu && u > 2.0 / 3.0) {
@@ -2833,31 +2847,49 @@ Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
   Angle phi = deflection.x + (s == 1.0 ? pi - delta : delta) + s * alpha;
   Angle phi_apsis = deflection_apsis.x + pi / 2.0;
   phi0 = mod(phi, pi);
-  TimedInverseDistance ui =
+  TimedInverseDistance ui0 =
       LookupRayInverseRadius(ray_inverse_radius_texture, e_square, phi0);
-  if (phi0 < phi_apsis && ui.x >= u_min && ui.x <= u_max &&
-      (sign(ui.x - u) == s)) {
-    u0 = ui.x;
-    phi0 = alpha + phi - phi0;
-    t0 = s * (ui.y - deflection.y);
-  }
-  if (e_square < kMu && s == 1.0) {
-    phi = 2.0 * phi_apsis - phi;
-    phi1 = mod(phi, pi);
-    ui = LookupRayInverseRadius(ray_inverse_radius_texture, e_square, phi1);
-    if (phi1 < phi_apsis && ui.x >= u_min && ui.x <= u_max) {
-      if (u0 == -1.0) {
-        u0 = ui.x;
-        phi0 = alpha + phi - phi1;
-        t0 = 2.0 * deflection_apsis.y - ui.y - deflection.y;
-      } else {
-        u1 = ui.x;
-        phi1 = alpha + phi - phi1;
-        t1 = 2.0 * deflection_apsis.y - ui.y - deflection.y;
-      }
+  if (phi0 < phi_apsis) {
+    Real side = s * (ui0.x - u);
+    if (side > 1e-3 || (side > -1e-3 && alpha < delta)) {
+      u0 = ui0.x;
+      phi0 = alpha + phi - phi0;
+      t0 = s * (ui0.y - deflection.y);
     }
   }
+  phi = 2.0 * phi_apsis - phi;
+  phi1 = mod(phi, pi);
+  TimedInverseDistance ui1 =
+      LookupRayInverseRadius(ray_inverse_radius_texture, e_square, phi1);
+  if (e_square < kMu && s == 1.0 && phi1 < phi_apsis) {
+    u1 = ui1.x;
+    phi1 = alpha + phi - phi1;
+    t1 = 2.0 * deflection_apsis.y - ui1.y - deflection.y;
+  }
+  // Compute the anti-aliasing opacity values.
+  Real fw0 = min(fwidth(ui0.x), fwidth(u0 == -1.0 ? u1 : u0));
+  Real fw1 = min(fwidth(ui1.x), fwidth(u1 == -1.0 ? u0 : u1));
+  alpha0 = FilteredPulse(u_min, u_max, u0, fw0);
+  alpha1 = FilteredPulse(u_min, u_max, u1, fw1);
+  if (abs(e_square - kMu) < min(fwidth(e_square), kMu)) {
+    if (alpha0 < 0.99) u0 = 2.0 / (1.0 / u_min + 1.0 / u_max);
+    if (alpha1 < 0.99) u1 = 2.0 / (1.0 / u_min + 1.0 / u_max);
+  }
   return ray_deflection;
+}
+
+Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
+               IN(RayInverseRadiusTexture) ray_inverse_radius_texture,
+               const Real p_r, const Angle delta, const Angle alpha,
+               const Real u_min, const Real u_max, OUT(Real) u0,
+               OUT(Angle) phi0, OUT(Real) t0, OUT(Real) alpha0, OUT(Real) u1,
+               OUT(Angle) phi1, OUT(Real) t1, OUT(Real) alpha1) {
+  Real u = 1.0 / p_r;
+  Real u_prime = -u / tan(delta);
+  Real e_square = u_prime * u_prime + u * u * (1.0 - u);
+  return TraceRay(ray_deflection_texture, ray_inverse_radius_texture, u,
+                  u_prime, e_square, delta, alpha, u_min, u_max, u0, phi0, t0,
+                  alpha0, u1, phi1, t1, alpha1);
 }
 
 // Returns the color of a black body of the given temperature. The 1D texture
@@ -2869,9 +2901,10 @@ vec3 BlackBodyColor(sampler2D black_body_texture, float temperature) {
 
 // Abstract functions, which must be implemented by the user:
 // - ray tracing function (see the default implementation in functions.glsl).
-Angle RayTrace(Real p_r, Angle delta, Angle alpha, Real u_min, Real u_max, 
-               out Real u0, out Angle phi0, out Real t0, 
-               out Real u1, out Angle phi1, out Real t1);
+Angle RayTrace(Real u, Real u_prime, Real e_square, Angle delta, Angle alpha,
+               Real u_min, Real u_max, out Real u0, out Angle phi0, out Real t0,
+               out Real alpha0, out Real u1, out Angle phi1, out Real t1,
+               out Real alpha1);
 // - Doppler function (see the default implementation below).
 vec3 Doppler(vec3 rgb, float doppler_factor);
 // - average color of the extended light sources (e.g. nebulae and galaxies) in
@@ -2881,7 +2914,7 @@ vec3 GalaxyColor(vec3 dir);
 //   of the pixel in direction 'dir'.
 vec3 StarTextureColor(vec3 dir);
 // - *sum* (in the footprint of the pixel in direction 'dir') of the colors of
-//   the punctual light sources in the texel at 'lod' corresponding to 'dir', 
+//   the punctual light sources in the texel at 'lod' corresponding to 'dir',
 //   and sub-texel position (in [-0.5,0.5]^2).
 vec3 StarTextureColor(vec3 dir, float lod, out vec2 sub_position);
 // - color of the stars in the footprint of the pixel in direction 'dir', times
@@ -2895,8 +2928,8 @@ vec4 DiscColor(vec2 p, float t, bool top_side, float doppler_factor);
 // Returns the given color when shifted by the given Doppler factor. The 3D
 // texture should contain this color at texture coord (r, 2*g, d) where r, g is
 // the rg chromaticity and d = atan(log(doppler_factor) / 0.21) / 3 + 0.5.
-vec3 DefaultDoppler(highp sampler3D doppler_texture, vec3 rgb, 
-    float doppler_factor) {
+vec3 DefaultDoppler(highp sampler3D doppler_texture, vec3 rgb,
+                    float doppler_factor) {
   float sum = rgb.r + rgb.g + rgb.b;
   if (sum == 0.0) {
     return vec3(0.0);
@@ -2919,8 +2952,8 @@ vec3 DefaultDoppler(highp sampler3D doppler_texture, vec3 rgb,
 // used will be the square of this number), and the maximum LOD for which
 // 'StarTextureColor(dir, lod, sub_position)' must be used (for larger LODs,
 // 'StarTextureColor(dir)' is used instead).
-vec3 DefaultStarColor(vec3 dir, float lensing_amplification_factor, 
-    float min_lod) {
+vec3 DefaultStarColor(vec3 dir, float lensing_amplification_factor,
+                      float min_lod) {
   // Compute the partial derivatives of dir (continuous across cube edges).
   vec3 dx_dir = dFdx(dir);
   vec3 dy_dir = dFdy(dir);
@@ -2966,8 +2999,11 @@ vec3 DefaultStarColor(vec3 dir, float lensing_amplification_factor,
     for (int i = ij0.x; i <= ij1.x; ++i) {
       vec2 texel_uv = (vec2(i, j) + vec2(0.5)) / lod_width;
       vec3 texel_dir = vec3(texel_uv * dir.z, dir.z);
-      if (max_abs_dir_comp == abs_dir.x) { texel_dir = texel_dir.zyx; } 
-      else if (max_abs_dir_comp == abs_dir.y) { texel_dir = texel_dir.xzy; }
+      if (max_abs_dir_comp == abs_dir.x) {
+        texel_dir = texel_dir.zyx;
+      } else if (max_abs_dir_comp == abs_dir.y) {
+        texel_dir = texel_dir.xzy;
+      }
       vec2 delta_uv;
       vec3 star_color = StarTextureColor(texel_dir, lod, delta_uv);
       vec2 star_uv = uv - texel_uv + delta_uv / lod_width;
@@ -2989,7 +3025,7 @@ vec3 DefaultStarColor(vec3 dir, float lensing_amplification_factor,
 // used to compute its density, and the orbital parameters for each particle
 // (inverse max and min radius, initial azimuth angle, precession 'ratio').
 vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
-    float disc_temperature, sampler2D black_body_texture) {
+                      float disc_temperature, sampler2D black_body_texture) {
   float p_r = length(p);
   float p_phi = atan(p.y, p.x);
 
@@ -3011,23 +3047,23 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
   }
 
   const float r_max = 49.0 / 12.0;
-  const float temperature_profile_max = 
+  const float temperature_profile_max =
       pow((1.0 - sqrt(3.0 / r_max)) / (r_max * r_max * r_max), 0.25);
-  float temperature_profile = 
+  float temperature_profile =
       pow((1.0 - sqrt(3.0 / p_r)) / (p_r * p_r * p_r), 0.25);
-  float temperature = 
+  float temperature =
       disc_temperature * temperature_profile * (1.0 / temperature_profile_max);
 
-  vec3 color = density * 
-      BlackBodyColor(black_body_texture, temperature * doppler_factor);
-  float alpha = smoothstep(INNER_DISC_R, INNER_DISC_R * 1.2, p_r) * 
-      smoothstep(OUTER_DISC_R, OUTER_DISC_R / 1.2, p_r);
+  vec3 color = density *
+               BlackBodyColor(black_body_texture, temperature * doppler_factor);
+  float alpha = smoothstep(INNER_DISC_R, INNER_DISC_R * 1.2, p_r) *
+                smoothstep(OUTER_DISC_R, OUTER_DISC_R / 1.2, p_r);
   return vec4(color * alpha, alpha);
 }
 
 // Finds the intersection of the given view ray with the scene, computes the
 // emitted light at these intersection points, computes the corresponding
-// received light, and composites and returns the final pixel color. 
+// received light, and composites and returns the final pixel color.
 //
 // Inputs:
 // - camera_position: the camera position, in Schwarzschild coordinates
@@ -3038,7 +3074,7 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
 //     (pseudo-)Cartesian coordinates.
 // - view_dir: the view ray direction, in the camera reference frame.
 vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 e_tau, vec3 e_w,
-    vec3 e_h, vec3 e_d, vec3 view_dir) {
+                vec3 e_h, vec3 e_d, vec3 view_dir) {
   vec3 q = normalize(view_dir);
   vec3 d = -e_tau + q.x * e_w + q.y * e_h + q.z * e_d;
 
@@ -3052,20 +3088,23 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 e_tau, vec3 e_w,
     t = -t;
   }
 
-  float alpha = acos(dot(e_x_prime, t));
-  float delta = acos(dot(e_x_prime, normalize(d)));
-
-  float u0, phi0, t0, u1, phi1, t1;
-  float deflection = RayTrace(camera_position[1], delta, alpha,
-      1.0 / OUTER_DISC_R, 1.0 / INNER_DISC_R, u0, phi0, t0, u1, phi1, t1);
+  float alpha = acos(clamp(dot(e_x_prime, t), -1.0, 1.0));
+  float delta = acos(clamp(dot(e_x_prime, normalize(d)), -1.0, 1.0));
 
   float u = 1.0 / camera_position[1];
   float u_prime = -u / tan(delta);
-  float e = -sqrt(u_prime * u_prime + u * u * (1.0 - u));
+  float e_square = u_prime * u_prime + u * u * (1.0 - u);
+  float e = -sqrt(e_square);
+
+  const float U_MIN = 1.0 / OUTER_DISC_R;
+  const float U_MAX = 1.0 / INNER_DISC_R;
+  float u0, phi0, t0, alpha0, u1, phi1, t1, alpha1;
+  float deflection = RayTrace(u, u_prime, e_square, delta, alpha, U_MIN, U_MAX,
+                              u0, phi0, t0, alpha0, u1, phi1, t1, alpha1);
 
   vec4 l = vec4(e / (1.0 - u), -u_prime, 0.0, u * u);
-  float g_k_l_receiver = k_s.x * l.x * (1.0 - u) -
-      k_s.y * l.y / (1.0 - u) - u * dot(e_tau, e_y_prime) * l.w / (u * u);
+  float g_k_l_receiver = k_s.x * l.x * (1.0 - u) - k_s.y * l.y / (1.0 - u) -
+                         u * dot(e_tau, e_y_prime) * l.w / (u * u);
 
   float delta_prime = delta + max(deflection, 0.0);
   vec3 d_prime = cos(delta_prime) * e_x_prime + sin(delta_prime) * e_y_prime;
@@ -3075,7 +3114,8 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 e_tau, vec3 e_w,
     float g_k_l_source = e;
     float doppler_factor = g_k_l_receiver / g_k_l_source;
 
-    float lensing_amplification_factor = length(cross(dFdx(q), dFdy(q))) /
+    float lensing_amplification_factor =
+        length(cross(dFdx(q), dFdy(q))) /
         length(cross(dFdx(d_prime), dFdy(d_prime)));
     // Clamp the result (otherwise potentially infinite).
     lensing_amplification_factor = min(lensing_amplification_factor, 1e6);
@@ -3084,29 +3124,29 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 e_tau, vec3 e_w,
     color += StarColor(d_prime, lensing_amplification_factor);
     color = Doppler(color, doppler_factor);
   }
-  if (u1 >= 0.0) {
-    float g_k_l_source = e * sqrt(2.0 / (2.0 - 3.0 * u1)) - 
-        u1 * sqrt(u1 / (2.0 - 3.0 * u1)) * dot(e_z, e_z_prime);
+  if (u1 >= 0.0 && alpha1 > 0.0) {
+    float g_k_l_source = e * sqrt(2.0 / (2.0 - 3.0 * u1)) -
+                         u1 * sqrt(u1 / (2.0 - 3.0 * u1)) * dot(e_z, e_z_prime);
     float doppler_factor = g_k_l_receiver / g_k_l_source;
-    bool top_side = 
+    bool top_side =
         (mod(abs(phi1 - alpha), 2.0 * pi) < 1e-3) == (e_x_prime.z > 0.0);
 
     vec3 i1 = (e_x_prime * cos(phi1) + e_y_prime * sin(phi1)) / u1;
     vec4 disc_color =
         DiscColor(i1.xy, camera_position[0] - t1, top_side, doppler_factor);
-    color = color * (1.0 - disc_color.a) + disc_color.rgb;
+    color = color * (1.0 - disc_color.a) + alpha1 * disc_color.rgb;
   }
-  if (u0 >= 0.0) {
-    float g_k_l_source = e * sqrt(2.0 / (2.0 - 3.0 * u0)) - 
-        u0 * sqrt(u0 / (2.0 - 3.0 * u0)) * dot(e_z, e_z_prime);
+  if (u0 >= 0.0 && alpha0 > 0.0) {
+    float g_k_l_source = e * sqrt(2.0 / (2.0 - 3.0 * u0)) -
+                         u0 * sqrt(u0 / (2.0 - 3.0 * u0)) * dot(e_z, e_z_prime);
     float doppler_factor = g_k_l_receiver / g_k_l_source;
-    bool top_side = 
+    bool top_side =
         (mod(abs(phi0 - alpha), 2.0 * pi) < 1e-3) == (e_x_prime.z > 0.0);
-    
+
     vec3 i0 = (e_x_prime * cos(phi0) + e_y_prime * sin(phi0)) / u0;
     vec4 disc_color =
         DiscColor(i0.xy, camera_position[0] - t0, top_side, doppler_factor);
-    color = color * (1.0 - disc_color.a) + disc_color.rgb;
+    color = color * (1.0 - disc_color.a) + alpha0 * disc_color.rgb;
   }
   return color;
 }
