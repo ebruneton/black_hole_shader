@@ -141,7 +141,7 @@ class Model {
     this.startSpeed = 
         new QuantizedValue(this, (x) => Math.min(x * x, 0.99), 347);
     this.orbitInclination = 
-        new QuantizedValue(this, (x) => Math.PI * (x - 0.5), 970, 1800);
+        new QuantizedValue(this, (x) => Math.PI * (x - 0.5), 970, 1799);
     this.lensing =
         new BooleanValue(this, true);
     this.doppler =
