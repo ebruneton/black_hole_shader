@@ -118,14 +118,12 @@ Real FilteredPulse(Real edge0, Real edge1, Real x, Real fw) {
 
 Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
                IN(RayInverseRadiusTexture) ray_inverse_radius_texture,
-               const Real p_r, const Angle delta, const Angle alpha,
-               const Real u_min, const Real u_max, OUT(Real) u0,
-               OUT(Angle) phi0, OUT(Real) t0, OUT(Real) alpha0, OUT(Real) u1,
-               OUT(Angle) phi1, OUT(Real) t1, OUT(Real) alpha1) {
+               const Real u, const Real u_prime, const Real e_square,
+               const Angle delta, const Angle alpha, const Real u_min,
+               const Real u_max, OUT(Real) u0, OUT(Angle) phi0, OUT(Real) t0,
+               OUT(Real) alpha0, OUT(Real) u1, OUT(Angle) phi1, OUT(Real) t1,
+               OUT(Real) alpha1) {
   // Compute the ray deflection.
-  Real u = 1.0 / p_r;
-  Real u_prime = -u / tan(delta);
-  Real e_square = u_prime * u_prime + u * u * (1.0 - u);
   u0 = -1.0;
   u1 = -1.0;
   if (e_square < kMu && u > 2.0 / 3.0) {
@@ -173,4 +171,18 @@ Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
     if (alpha1 < 0.99) u1 = 2.0 / (1.0 / u_min + 1.0 / u_max);
   }
   return ray_deflection;
+}
+
+Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
+               IN(RayInverseRadiusTexture) ray_inverse_radius_texture,
+               const Real p_r, const Angle delta, const Angle alpha,
+               const Real u_min, const Real u_max, OUT(Real) u0,
+               OUT(Angle) phi0, OUT(Real) t0, OUT(Real) alpha0, OUT(Real) u1,
+               OUT(Angle) phi1, OUT(Real) t1, OUT(Real) alpha1) {
+  Real u = 1.0 / p_r;
+  Real u_prime = -u / tan(delta);
+  Real e_square = u_prime * u_prime + u * u * (1.0 - u);
+  return TraceRay(ray_deflection_texture, ray_inverse_radius_texture, u,
+                  u_prime, e_square, delta, alpha, u_min, u_max, u0, phi0, t0,
+                  alpha0, u1, phi1, t1, alpha1);
 }

@@ -36,9 +36,10 @@ vec3 BlackBodyColor(sampler2D black_body_texture, float temperature) {
 
 // Abstract functions, which must be implemented by the user:
 // - ray tracing function (see the default implementation in functions.glsl).
-Angle RayTrace(Real p_r, Angle delta, Angle alpha, Real u_min, Real u_max,
-               out Real u0, out Angle phi0, out Real t0, out Real alpha0,
-               out Real u1, out Angle phi1, out Real t1, out Real alpha1);
+Angle RayTrace(Real u, Real u_prime, Real e_square, Angle delta, Angle alpha,
+               Real u_min, Real u_max, out Real u0, out Angle phi0, out Real t0,
+               out Real alpha0, out Real u1, out Angle phi1, out Real t1,
+               out Real alpha1);
 // - Doppler function (see the default implementation below).
 vec3 Doppler(vec3 rgb, float doppler_factor);
 // - average color of the extended light sources (e.g. nebulae and galaxies) in
@@ -225,15 +226,16 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 e_tau, vec3 e_w,
   float alpha = acos(clamp(dot(e_x_prime, t), -1.0, 1.0));
   float delta = acos(clamp(dot(e_x_prime, normalize(d)), -1.0, 1.0));
 
+  float u = 1.0 / camera_position[1];
+  float u_prime = -u / tan(delta);
+  float e_square = u_prime * u_prime + u * u * (1.0 - u);
+  float e = -sqrt(e_square);
+
   const float U_MIN = 1.0 / OUTER_DISC_R;
   const float U_MAX = 1.0 / INNER_DISC_R;
   float u0, phi0, t0, alpha0, u1, phi1, t1, alpha1;
-  float deflection = RayTrace(camera_position[1], delta, alpha, U_MIN, U_MAX,
+  float deflection = RayTrace(u, u_prime, e_square, delta, alpha, U_MIN, U_MAX,
                               u0, phi0, t0, alpha0, u1, phi1, t1, alpha1);
-
-  float u = 1.0 / camera_position[1];
-  float u_prime = -u / tan(delta);
-  float e = -sqrt(u_prime * u_prime + u * u * (1.0 - u));
 
   vec4 l = vec4(e / (1.0 - u), -u_prime, 0.0, u * u);
   float g_k_l_receiver = k_s.x * l.x * (1.0 - u) - k_s.y * l.y / (1.0 - u) -

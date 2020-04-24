@@ -56,9 +56,9 @@ layout(location = 0) out vec4 frag_color;
 
 // Simple ray-tracing function to compute the intersections of a ray with the
 // scene, when the space-time geometry is assumed to be flat.
-float TraceRayEuclidean(float p_r, float delta, float alpha, float u_min, 
-    float u_max, out float u0, out float phi0, out float t0, out float u1, 
-    out float phi1, out float t1) {
+float TraceRayEuclidean(float p_r, float delta, float alpha, float u_min,
+                        float u_max, out float u0, out float phi0, out float t0,
+                        out float u1, out float phi1, out float t1) {
   float cos_delta = cos(delta);
   float sin_delta = sin(delta);
   float tan_alpha = tan(alpha);
@@ -68,7 +68,7 @@ float TraceRayEuclidean(float p_r, float delta, float alpha, float u_min,
   u1 = -1.0;
   float t = p_r / (sin_delta / tan_alpha - cos_delta);
   float r = length(vec2(p_r + t * cos_delta, t * sin_delta));
-  if (t >= 0.0 && r * u_min <= 1.0 && r * u_max >= 1.0 && 
+  if (t >= 0.0 && r * u_min <= 1.0 && r * u_max >= 1.0 &&
       (deflection == 0.0 || t < p_r)) {
     u0 = 1.0 / r;
     phi0 = alpha;
@@ -77,17 +77,19 @@ float TraceRayEuclidean(float p_r, float delta, float alpha, float u_min,
   return deflection;
 }
 
-float RayTrace(float p_r, float delta, float alpha, float u_min, float u_max, 
-               out float u0, out float phi0, out float t0, out float alpha0,
-               out float u1, out float phi1, out float t1, out float alpha1) {
+float RayTrace(float u, float u_prime, float e_square, float delta, float alpha,
+               float u_min, float u_max, out float u0, out float phi0,
+               out float t0, out float alpha0, out float u1, out float phi1,
+               out float t1, out float alpha1) {
 #if (LENSING == 1)
-  return TraceRay(ray_deflection_texture, ray_inverse_radius_texture, p_r,
-      delta, alpha, u_min, u_max, u0, phi0, t0, alpha0, u1, phi1, t1, alpha1);
+  return TraceRay(ray_deflection_texture, ray_inverse_radius_texture, u,
+                  u_prime, e_square, delta, alpha, u_min, u_max, u0, phi0, t0,
+                  alpha0, u1, phi1, t1, alpha1);
 #else
   alpha0 = 1.0;
   alpha1 = 1.0;
-  return TraceRayEuclidean(
-      p_r, delta, alpha, u_min, u_max, u0, phi0, t0, u1, phi1, t1);
+  return TraceRayEuclidean(1.0 / u, delta, alpha, u_min, u_max, u0, phi0, t0,
+                           u1, phi1, t1);
 #endif
 }
 
@@ -138,7 +140,7 @@ vec3 Doppler(vec3 rgb, float doppler_factor) {
 }
 
 vec4 GridDiscColor(vec2 p, float t, bool top_side, float doppler_factor,
-    float temperature, sampler2D black_body_texture) {
+                   float temperature, sampler2D black_body_texture) {
   float p_r = length(p);
   if (p_r <= INNER_DISC_R || p_r >= OUTER_DISC_R) {
     return vec4(0.0);
@@ -147,7 +149,7 @@ vec4 GridDiscColor(vec2 p, float t, bool top_side, float doppler_factor,
   const float dphi_dt = uM * sqrt(0.5 * uM) / (2.0 * pi);
   float p_phi = atan(p.y, p.x) - t * dphi_dt;
   float value_phi = mod(p_phi / pi * 16.0, 1.0) < 0.2 ? 0.0 : 1.0;
-  float value_r = mod(p_r / 2.0, 1.0) < 0.2 ? 0.0 : 1.0; 
+  float value_r = mod(p_r / 2.0, 1.0) < 0.2 ? 0.0 : 1.0;
   vec3 color = BlackBodyColor(black_body_texture, temperature * doppler_factor);
   color *= 0.2 + 0.8 * value_phi * value_r;
   return vec4(top_side ? color : color * 0.01, 1.0);
@@ -161,11 +163,11 @@ vec4 DiscColor(vec2 p, float t, bool top_side, float doppler_factor) {
   doppler_factor = 1.0;
 #endif
 #if (GRID == 1)
-  vec4 color = GridDiscColor(
-      p, t, top_side, doppler_factor, temperature, black_body_texture);
+  vec4 color = GridDiscColor(p, t, top_side, doppler_factor, temperature,
+                             black_body_texture);
 #else
-  vec4 color = DefaultDiscColor(
-      p, t, top_side, doppler_factor, temperature, black_body_texture);
+  vec4 color = DefaultDiscColor(p, t, top_side, doppler_factor, temperature,
+                                black_body_texture);
 #endif
   return vec4(density * color.rgb, opacity * color.a);
 }
