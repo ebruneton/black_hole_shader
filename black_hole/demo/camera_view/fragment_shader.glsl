@@ -78,12 +78,14 @@ float TraceRayEuclidean(float p_r, float delta, float alpha, float u_min,
 }
 
 float RayTrace(float p_r, float delta, float alpha, float u_min, float u_max, 
-               out float u0, out float phi0, out float t0, 
-               out float u1, out float phi1, out float t1) {
+               out float u0, out float phi0, out float t0, out float alpha0,
+               out float u1, out float phi1, out float t1, out float alpha1) {
 #if (LENSING == 1)
-  return TraceRay(ray_deflection_texture, ray_inverse_radius_texture,
-      p_r, delta, alpha, u_min, u_max, u0, phi0, t0, u1, phi1, t1);
+  return TraceRay(ray_deflection_texture, ray_inverse_radius_texture, p_r,
+      delta, alpha, u_min, u_max, u0, phi0, t0, alpha0, u1, phi1, t1, alpha1);
 #else
+  alpha0 = 1.0;
+  alpha1 = 1.0;
   return TraceRayEuclidean(
       p_r, delta, alpha, u_min, u_max, u0, phi0, t0, u1, phi1, t1);
 #endif
@@ -138,6 +140,9 @@ vec3 Doppler(vec3 rgb, float doppler_factor) {
 vec4 GridDiscColor(vec2 p, float t, bool top_side, float doppler_factor,
     float temperature, sampler2D black_body_texture) {
   float p_r = length(p);
+  if (p_r <= INNER_DISC_R || p_r >= OUTER_DISC_R) {
+    return vec4(0.0);
+  }
   const float uM = 1.0 / 6.0;
   const float dphi_dt = uM * sqrt(0.5 * uM) / (2.0 * pi);
   float p_phi = atan(p.y, p.x) - t * dphi_dt;

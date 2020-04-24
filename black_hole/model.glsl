@@ -36,9 +36,9 @@ vec3 BlackBodyColor(sampler2D black_body_texture, float temperature) {
 
 // Abstract functions, which must be implemented by the user:
 // - ray tracing function (see the default implementation in functions.glsl).
-Angle RayTrace(Real p_r, Angle delta, Angle alpha, Real u_min, Real u_max, 
-               out Real u0, out Angle phi0, out Real t0, 
-               out Real u1, out Angle phi1, out Real t1);
+Angle RayTrace(Real p_r, Angle delta, Angle alpha, Real u_min, Real u_max,
+               out Real u0, out Angle phi0, out Real t0, out Real alpha0,
+               out Real u1, out Angle phi1, out Real t1, out Real alpha1);
 // - Doppler function (see the default implementation below).
 vec3 Doppler(vec3 rgb, float doppler_factor);
 // - average color of the extended light sources (e.g. nebulae and galaxies) in
@@ -48,7 +48,7 @@ vec3 GalaxyColor(vec3 dir);
 //   of the pixel in direction 'dir'.
 vec3 StarTextureColor(vec3 dir);
 // - *sum* (in the footprint of the pixel in direction 'dir') of the colors of
-//   the punctual light sources in the texel at 'lod' corresponding to 'dir', 
+//   the punctual light sources in the texel at 'lod' corresponding to 'dir',
 //   and sub-texel position (in [-0.5,0.5]^2).
 vec3 StarTextureColor(vec3 dir, float lod, out vec2 sub_position);
 // - color of the stars in the footprint of the pixel in direction 'dir', times
@@ -62,8 +62,8 @@ vec4 DiscColor(vec2 p, float t, bool top_side, float doppler_factor);
 // Returns the given color when shifted by the given Doppler factor. The 3D
 // texture should contain this color at texture coord (r, 2*g, d) where r, g is
 // the rg chromaticity and d = atan(log(doppler_factor) / 0.21) / 3 + 0.5.
-vec3 DefaultDoppler(highp sampler3D doppler_texture, vec3 rgb, 
-    float doppler_factor) {
+vec3 DefaultDoppler(highp sampler3D doppler_texture, vec3 rgb,
+                    float doppler_factor) {
   float sum = rgb.r + rgb.g + rgb.b;
   if (sum == 0.0) {
     return vec3(0.0);
@@ -86,8 +86,8 @@ vec3 DefaultDoppler(highp sampler3D doppler_texture, vec3 rgb,
 // used will be the square of this number), and the maximum LOD for which
 // 'StarTextureColor(dir, lod, sub_position)' must be used (for larger LODs,
 // 'StarTextureColor(dir)' is used instead).
-vec3 DefaultStarColor(vec3 dir, float lensing_amplification_factor, 
-    float min_lod) {
+vec3 DefaultStarColor(vec3 dir, float lensing_amplification_factor,
+                      float min_lod) {
   // Compute the partial derivatives of dir (continuous across cube edges).
   vec3 dx_dir = dFdx(dir);
   vec3 dy_dir = dFdy(dir);
@@ -133,8 +133,11 @@ vec3 DefaultStarColor(vec3 dir, float lensing_amplification_factor,
     for (int i = ij0.x; i <= ij1.x; ++i) {
       vec2 texel_uv = (vec2(i, j) + vec2(0.5)) / lod_width;
       vec3 texel_dir = vec3(texel_uv * dir.z, dir.z);
-      if (max_abs_dir_comp == abs_dir.x) { texel_dir = texel_dir.zyx; } 
-      else if (max_abs_dir_comp == abs_dir.y) { texel_dir = texel_dir.xzy; }
+      if (max_abs_dir_comp == abs_dir.x) {
+        texel_dir = texel_dir.zyx;
+      } else if (max_abs_dir_comp == abs_dir.y) {
+        texel_dir = texel_dir.xzy;
+      }
       vec2 delta_uv;
       vec3 star_color = StarTextureColor(texel_dir, lod, delta_uv);
       vec2 star_uv = uv - texel_uv + delta_uv / lod_width;
@@ -156,7 +159,7 @@ vec3 DefaultStarColor(vec3 dir, float lensing_amplification_factor,
 // used to compute its density, and the orbital parameters for each particle
 // (inverse max and min radius, initial azimuth angle, precession 'ratio').
 vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
-    float disc_temperature, sampler2D black_body_texture) {
+                      float disc_temperature, sampler2D black_body_texture) {
   float p_r = length(p);
   float p_phi = atan(p.y, p.x);
 
@@ -178,23 +181,23 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
   }
 
   const float r_max = 49.0 / 12.0;
-  const float temperature_profile_max = 
+  const float temperature_profile_max =
       pow((1.0 - sqrt(3.0 / r_max)) / (r_max * r_max * r_max), 0.25);
-  float temperature_profile = 
+  float temperature_profile =
       pow((1.0 - sqrt(3.0 / p_r)) / (p_r * p_r * p_r), 0.25);
-  float temperature = 
+  float temperature =
       disc_temperature * temperature_profile * (1.0 / temperature_profile_max);
 
-  vec3 color = density * 
-      BlackBodyColor(black_body_texture, temperature * doppler_factor);
-  float alpha = smoothstep(INNER_DISC_R, INNER_DISC_R * 1.2, p_r) * 
-      smoothstep(OUTER_DISC_R, OUTER_DISC_R / 1.2, p_r);
+  vec3 color = density *
+               BlackBodyColor(black_body_texture, temperature * doppler_factor);
+  float alpha = smoothstep(INNER_DISC_R, INNER_DISC_R * 1.2, p_r) *
+                smoothstep(OUTER_DISC_R, OUTER_DISC_R / 1.2, p_r);
   return vec4(color * alpha, alpha);
 }
 
 // Finds the intersection of the given view ray with the scene, computes the
 // emitted light at these intersection points, computes the corresponding
-// received light, and composites and returns the final pixel color. 
+// received light, and composites and returns the final pixel color.
 //
 // Inputs:
 // - camera_position: the camera position, in Schwarzschild coordinates
@@ -205,7 +208,7 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
 //     (pseudo-)Cartesian coordinates.
 // - view_dir: the view ray direction, in the camera reference frame.
 vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 e_tau, vec3 e_w,
-    vec3 e_h, vec3 e_d, vec3 view_dir) {
+                vec3 e_h, vec3 e_d, vec3 view_dir) {
   vec3 q = normalize(view_dir);
   vec3 d = -e_tau + q.x * e_w + q.y * e_h + q.z * e_d;
 
@@ -222,17 +225,19 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 e_tau, vec3 e_w,
   float alpha = acos(clamp(dot(e_x_prime, t), -1.0, 1.0));
   float delta = acos(clamp(dot(e_x_prime, normalize(d)), -1.0, 1.0));
 
-  float u0, phi0, t0, u1, phi1, t1;
-  float deflection = RayTrace(camera_position[1], delta, alpha,
-      1.0 / OUTER_DISC_R, 1.0 / INNER_DISC_R, u0, phi0, t0, u1, phi1, t1);
+  const float U_MIN = 1.0 / OUTER_DISC_R;
+  const float U_MAX = 1.0 / INNER_DISC_R;
+  float u0, phi0, t0, alpha0, u1, phi1, t1, alpha1;
+  float deflection = RayTrace(camera_position[1], delta, alpha, U_MIN, U_MAX,
+                              u0, phi0, t0, alpha0, u1, phi1, t1, alpha1);
 
   float u = 1.0 / camera_position[1];
   float u_prime = -u / tan(delta);
   float e = -sqrt(u_prime * u_prime + u * u * (1.0 - u));
 
   vec4 l = vec4(e / (1.0 - u), -u_prime, 0.0, u * u);
-  float g_k_l_receiver = k_s.x * l.x * (1.0 - u) -
-      k_s.y * l.y / (1.0 - u) - u * dot(e_tau, e_y_prime) * l.w / (u * u);
+  float g_k_l_receiver = k_s.x * l.x * (1.0 - u) - k_s.y * l.y / (1.0 - u) -
+                         u * dot(e_tau, e_y_prime) * l.w / (u * u);
 
   float delta_prime = delta + max(deflection, 0.0);
   vec3 d_prime = cos(delta_prime) * e_x_prime + sin(delta_prime) * e_y_prime;
@@ -242,7 +247,8 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 e_tau, vec3 e_w,
     float g_k_l_source = e;
     float doppler_factor = g_k_l_receiver / g_k_l_source;
 
-    float lensing_amplification_factor = length(cross(dFdx(q), dFdy(q))) /
+    float lensing_amplification_factor =
+        length(cross(dFdx(q), dFdy(q))) /
         length(cross(dFdx(d_prime), dFdy(d_prime)));
     // Clamp the result (otherwise potentially infinite).
     lensing_amplification_factor = min(lensing_amplification_factor, 1e6);
@@ -251,29 +257,29 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 e_tau, vec3 e_w,
     color += StarColor(d_prime, lensing_amplification_factor);
     color = Doppler(color, doppler_factor);
   }
-  if (u1 >= 0.0) {
-    float g_k_l_source = e * sqrt(2.0 / (2.0 - 3.0 * u1)) - 
-        u1 * sqrt(u1 / (2.0 - 3.0 * u1)) * dot(e_z, e_z_prime);
+  if (u1 >= 0.0 && alpha1 > 0.0) {
+    float g_k_l_source = e * sqrt(2.0 / (2.0 - 3.0 * u1)) -
+                         u1 * sqrt(u1 / (2.0 - 3.0 * u1)) * dot(e_z, e_z_prime);
     float doppler_factor = g_k_l_receiver / g_k_l_source;
-    bool top_side = 
+    bool top_side =
         (mod(abs(phi1 - alpha), 2.0 * pi) < 1e-3) == (e_x_prime.z > 0.0);
 
     vec3 i1 = (e_x_prime * cos(phi1) + e_y_prime * sin(phi1)) / u1;
     vec4 disc_color =
         DiscColor(i1.xy, camera_position[0] - t1, top_side, doppler_factor);
-    color = color * (1.0 - disc_color.a) + disc_color.rgb;
+    color = color * (1.0 - disc_color.a) + alpha1 * disc_color.rgb;
   }
-  if (u0 >= 0.0) {
-    float g_k_l_source = e * sqrt(2.0 / (2.0 - 3.0 * u0)) - 
-        u0 * sqrt(u0 / (2.0 - 3.0 * u0)) * dot(e_z, e_z_prime);
+  if (u0 >= 0.0 && alpha0 > 0.0) {
+    float g_k_l_source = e * sqrt(2.0 / (2.0 - 3.0 * u0)) -
+                         u0 * sqrt(u0 / (2.0 - 3.0 * u0)) * dot(e_z, e_z_prime);
     float doppler_factor = g_k_l_receiver / g_k_l_source;
-    bool top_side = 
+    bool top_side =
         (mod(abs(phi0 - alpha), 2.0 * pi) < 1e-3) == (e_x_prime.z > 0.0);
-    
+
     vec3 i0 = (e_x_prime * cos(phi0) + e_y_prime * sin(phi0)) / u0;
     vec4 disc_color =
         DiscColor(i0.xy, camera_position[0] - t0, top_side, doppler_factor);
-    color = color * (1.0 - disc_color.a) + disc_color.rgb;
+    color = color * (1.0 - disc_color.a) + alpha0 * disc_color.rgb;
   }
   return color;
 }

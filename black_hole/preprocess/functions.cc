@@ -45,6 +45,11 @@ using dimensional::BinaryFunction;
 using dimensional::pi;
 using dimensional::rad;
 using dimensional::vec2;
+using std::max;
+using std::min;
+
+Real abs(const Real x) { return x < 0.0 ? -x : x; }
+Real fwidth(const Real x) { return 0.0; }
 
 #include "black_hole/functions.glsl"
 

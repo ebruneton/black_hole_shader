@@ -107,12 +107,21 @@ TimedInverseDistance LookupRayInverseRadius(IN(RayInverseRadiusTexture)
 // (and at most 4 texture lookups).
 // -----------------------------------------------------------------------------
 
+// Anti-aliased pulse function. See
+// https://renderman.pixar.com/resources/RenderMan_20/basicAntialiasing.html.
+Real FilteredPulse(Real edge0, Real edge1, Real x, Real fw) {
+  fw = max(fw, 1e-6);
+  Real x0 = x - fw * 0.5;
+  Real x1 = x0 + fw;
+  return max(0.0, (min(x1, edge1) - max(x0, edge0)) / fw);
+}
+
 Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
                IN(RayInverseRadiusTexture) ray_inverse_radius_texture,
                const Real p_r, const Angle delta, const Angle alpha,
                const Real u_min, const Real u_max, OUT(Real) u0,
-               OUT(Angle) phi0, OUT(Real) t0, OUT(Real) u1, OUT(Angle) phi1,
-               OUT(Real) t1) {
+               OUT(Angle) phi0, OUT(Real) t0, OUT(Real) alpha0, OUT(Real) u1,
+               OUT(Angle) phi1, OUT(Real) t1, OUT(Real) alpha1) {
   // Compute the ray deflection.
   Real u = 1.0 / p_r;
   Real u_prime = -u / tan(delta);
@@ -135,31 +144,33 @@ Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
   Angle phi = deflection.x + (s == 1.0 ? pi - delta : delta) + s * alpha;
   Angle phi_apsis = deflection_apsis.x + pi / 2.0;
   phi0 = mod(phi, pi);
-  TimedInverseDistance ui =
+  TimedInverseDistance ui0 =
       LookupRayInverseRadius(ray_inverse_radius_texture, e_square, phi0);
-  if (phi0 < phi_apsis && ui.x >= u_min && ui.x <= u_max) {
-    Real side = s * (ui.x - u);
+  if (phi0 < phi_apsis) {
+    Real side = s * (ui0.x - u);
     if (side > 1e-3 || (side > -1e-3 && alpha < delta)) {
-      u0 = ui.x;
+      u0 = ui0.x;
       phi0 = alpha + phi - phi0;
-      t0 = s * (ui.y - deflection.y);
+      t0 = s * (ui0.y - deflection.y);
     }
   }
-  if (e_square < kMu && s == 1.0) {
-    phi = 2.0 * phi_apsis - phi;
-    phi1 = mod(phi, pi);
-    ui = LookupRayInverseRadius(ray_inverse_radius_texture, e_square, phi1);
-    if (phi1 < phi_apsis && ui.x >= u_min && ui.x <= u_max) {
-      if (u0 == -1.0) {
-        u0 = ui.x;
-        phi0 = alpha + phi - phi1;
-        t0 = 2.0 * deflection_apsis.y - ui.y - deflection.y;
-      } else {
-        u1 = ui.x;
-        phi1 = alpha + phi - phi1;
-        t1 = 2.0 * deflection_apsis.y - ui.y - deflection.y;
-      }
-    }
+  phi = 2.0 * phi_apsis - phi;
+  phi1 = mod(phi, pi);
+  TimedInverseDistance ui1 =
+      LookupRayInverseRadius(ray_inverse_radius_texture, e_square, phi1);
+  if (e_square < kMu && s == 1.0 && phi1 < phi_apsis) {
+    u1 = ui1.x;
+    phi1 = alpha + phi - phi1;
+    t1 = 2.0 * deflection_apsis.y - ui1.y - deflection.y;
+  }
+  // Compute the anti-aliasing opacity values.
+  Real fw0 = min(fwidth(ui0.x), fwidth(u0 == -1.0 ? u1 : u0));
+  Real fw1 = min(fwidth(ui1.x), fwidth(u1 == -1.0 ? u0 : u1));
+  alpha0 = FilteredPulse(u_min, u_max, u0, fw0);
+  alpha1 = FilteredPulse(u_min, u_max, u1, fw1);
+  if (abs(e_square - kMu) < min(fwidth(e_square), kMu)) {
+    if (alpha0 < 0.99) u0 = 2.0 / (1.0 / u_min + 1.0 / u_max);
+    if (alpha1 < 0.99) u1 = 2.0 / (1.0 / u_min + 1.0 / u_max);
   }
   return ray_deflection;
 }

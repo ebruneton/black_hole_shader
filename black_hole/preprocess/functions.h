@@ -76,14 +76,15 @@ void ComputeRayInverseRadiusTexture(RayInverseRadiusTexture *texture);
 // intersections, if any, are output in (u0, phi0, t0) and (u1, phi1, t1), with
 // ti the light propagation time between the intersection and the camera (must
 // be subtracted from the camera time to get the retarded time). ui is set to -1
-// if there is no intersection.
+// if there is no intersection. alpha0 and alpha1 are anti-aliasing opacity
+// values.
 
 dimensional::Angle TraceRay(
     const RayDeflectionTexture &ray_deflection_texture,
     const RayInverseRadiusTexture &ray_inverse_radius_texture, Real p_r,
     dimensional::Angle delta, dimensional::Angle alpha, Real u_min, Real u_max,
-    Real &u0, dimensional::Angle &phi0, Real &t0, Real &u1,
-    dimensional::Angle &phi1, Real &t1);
+    Real &u0, dimensional::Angle &phi0, Real &t0, Real &alpha0, Real &u1,
+    dimensional::Angle &phi1, Real &t1, Real &alpha1);
 
 }  // namespace preprocess
 }  // namespace black_hole

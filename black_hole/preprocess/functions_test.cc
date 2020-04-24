@@ -254,11 +254,11 @@ class FunctionsTest : public dimensional::TestCase {
   void TestTraceRayDeflection() {
     auto test = [&](Real p_r, Angle delta) {
       Angle expected = RayDeflectionReference(p_r, delta);
-      Real u0, u1, t0, t1;
+      Real u0, u1, t0, t1, alpha0, alpha1;
       Angle phi0, phi1;
-      Angle actual =
-          TraceRay(ray_deflection_texture_, ray_inverse_radius_texture_, p_r,
-                   delta, 0.0 * rad, kUmin, kUmax, u0, phi0, t0, u1, phi1, t1);
+      Angle actual = TraceRay(
+          ray_deflection_texture_, ray_inverse_radius_texture_, p_r, delta,
+          0.0 * rad, kUmin, kUmax, u0, phi0, t0, alpha0, u1, phi1, t1, alpha1);
       ExpectNear(expected.to(rad), actual.to(rad), kEpsilon);
     };
 
@@ -273,15 +273,23 @@ class FunctionsTest : public dimensional::TestCase {
 
   void TestTraceRayIntersections() {
     Real expected_u0, expected_u1, expected_t0, expected_t1, actual_u0,
-        actual_u1, actual_t0, actual_t1;
+        actual_u1, actual_t0, actual_t1, actual_alpha0, actual_alpha1;
     Angle expected_phi0, expected_phi1, actual_phi0, actual_phi1;
     RayDiscIntersectionsReference(p_r_, delta_, alpha_, kUmin, kUmax,
                                   &expected_u0, &expected_phi0, &expected_t0,
                                   &expected_u1, &expected_phi1, &expected_t1);
 
     TraceRay(ray_deflection_texture_, ray_inverse_radius_texture_, p_r_, delta_,
-             alpha_, kUmin, kUmax, actual_u0, actual_phi0, actual_t0, actual_u1,
-             actual_phi1, actual_t1);
+             alpha_, kUmin, kUmax, actual_u0, actual_phi0, actual_t0,
+             actual_alpha0, actual_u1, actual_phi1, actual_t1, actual_alpha1);
+    if (actual_alpha0 == 0.0) actual_u0 = -1.0;
+    if (actual_alpha1 == 0.0) actual_u1 = -1.0;
+    if (actual_u0 == -1.0) {
+      actual_u0 = actual_u1;
+      actual_phi0 = actual_phi1;
+      actual_t0 = actual_t1;
+      actual_u1 = -1.0;
+    }
 
     ExpectNear(expected_u0, actual_u0, Real(kEpsilon));
     ExpectNear(expected_u1, actual_u1, Real(kEpsilon));
