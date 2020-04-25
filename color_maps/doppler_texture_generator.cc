@@ -54,6 +54,10 @@ constexpr double kLambdaMax = 830;
 constexpr double kTmin = 500;
 constexpr double kTmax = 35000;
 
+// Maximum Doppler intensity factor. Without clamping, large Doppler factors
+// cause numerical precision errors, which in turn cause flicker effects.
+constexpr double kMaxDopplerIntensityFactor = 1000;
+
 // The speed of light, the Planck constant and the Boltzmann constant.
 constexpr double c = 299792458.0;
 constexpr double h = 6.62607015e-34;
@@ -277,7 +281,11 @@ void ComputeDopplerTexture(const std::string& file_name) {
         const double D =
             exp(0.21 * tan(3.0 * (k / (kDopplerTextureDepth - 1.0) - 0.5)));
         const Xyz xyz = s.ComputeColor(D);
-        const LinearSrgb linear_srgb = ToClampedLinearSrgb(xyz);
+        LinearSrgb linear_srgb = ToClampedLinearSrgb(xyz);
+        const float sum = linear_srgb[0] + linear_srgb[1] + linear_srgb[2];
+        if (sum > kMaxDopplerIntensityFactor) {
+          linear_srgb = linear_srgb / sum * kMaxDopplerIntensityFactor;
+        }
         const int offset = i + j * kDopplerTextureWidth +
                            k * kDopplerTextureWidth * kDopplerTextureHeight;
         texture[3 * offset] = std::max(linear_srgb[0], 0.0);

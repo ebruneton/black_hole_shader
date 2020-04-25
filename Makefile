@@ -92,7 +92,9 @@ output/black_hole/preprocess/preprocess: \
     output/black_hole/preprocess/preprocess_main.o
 	$(GPP) $^ -o $@
 
-output/black_hole/preprocess/functions.o: black_hole/functions.glsl
+output/black_hole/preprocess/*.o: \
+    black_hole/preprocess/definitions.h \
+    black_hole/functions.glsl
 
 # Bloom shader and bloom filters generator.
 

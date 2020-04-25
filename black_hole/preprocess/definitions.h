@@ -41,8 +41,8 @@ namespace preprocess {
 // functions of our black hole shader with a C++ compiler (both to reuse them in
 // order to precompute the textures they need, and for testing them).
 
-constexpr int RAY_DEFLECTION_TEXTURE_WIDTH = 128;
-constexpr int RAY_DEFLECTION_TEXTURE_HEIGHT = 64;
+constexpr int RAY_DEFLECTION_TEXTURE_WIDTH = 512;
+constexpr int RAY_DEFLECTION_TEXTURE_HEIGHT = 512;
 
 constexpr int RAY_INVERSE_RADIUS_TEXTURE_WIDTH = 64;
 constexpr int RAY_INVERSE_RADIUS_TEXTURE_HEIGHT = 32;
