@@ -1671,11 +1671,11 @@ class ShaderManager {
             ${this.textureManager.rayInverseRadiusTexture.width};
         const int RAY_INVERSE_RADIUS_TEXTURE_HEIGHT = 
             ${this.textureManager.rayInverseRadiusTexture.height};
-        const float STARS_CUBE_MAP_SIZE = 
-            ${this.model.grid.getValue() ? 128 : 2048}.0;
-        const float MAX_FOOTPRINT_SIZE = 16.0;
+        const float STARS_CUBE_MAP_SIZE =
+            float(${this.model.grid.getValue() ? 128 : 2048});
+        const float MAX_FOOTPRINT_SIZE = float(16);
         const float MAX_FOOTPRINT_LOD =
-            ${this.model.grid.getValue() ? 0 : 4}.0;\n`;
+            float(${this.model.grid.getValue() ? 0 : 4});\n`;
 
     const gl = this.gl;
     const vertexShader = createShader(
