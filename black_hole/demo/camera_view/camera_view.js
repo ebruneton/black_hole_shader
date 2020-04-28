@@ -78,7 +78,6 @@ class CameraView {
       this.hidden = document.hidden;
       if (!this.hidden) {
         this.lastFrameTime = undefined;
-        this.onRender();
       }
     });
 
