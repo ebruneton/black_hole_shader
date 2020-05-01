@@ -116,8 +116,8 @@ vec3 StarTextureColor(vec3 dir, float lod, out vec2 sub_position) {
   return vec3(100.0);
 #else
   vec3 color = textureLod(star_cube_texture, dir, lod).rgb;
-  ivec3 bits = floatBitsToInt(color);
-  sub_position = vec2((bits.xx - bits.yz) % 10000) / 20000.0;
+  ivec2 bits = floatBitsToInt(color.rb);
+  sub_position = vec2((bits >> 8) % 257) / 257.0 - vec2(0.5);
   return color;
 #endif
 }

@@ -120,7 +120,7 @@ class ShaderManager {
             ${this.textureManager.rayInverseRadiusTexture.height};
         const float STARS_CUBE_MAP_SIZE =
             float(${this.model.grid.getValue() ? 128 : 2048});
-        const float MAX_FOOTPRINT_SIZE = float(16);
+        const float MAX_FOOTPRINT_SIZE = float(4);
         const float MAX_FOOTPRINT_LOD =
             float(${this.model.grid.getValue() ? 0 : 4});\n`;
 
