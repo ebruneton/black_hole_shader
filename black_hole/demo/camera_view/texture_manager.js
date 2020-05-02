@@ -105,7 +105,7 @@ class TextureManager {
     this.starTexture2 = null;
     this.tilesQueue = [];
     this.numTilesLoaded = 0;
-    this.numTilesLoadedPerLevel = [];
+    this.numTilesLoadedPerLevel = [0, 0, 0, 0, 0];
     this.numPendingRequests = 0;
 
     const ext = gl.getExtension('EXT_texture_filter_anisotropic');
@@ -215,7 +215,7 @@ class TextureManager {
     const base = '../../gaia_sky_map';
     const prefixes = ['pos-x', 'neg-x', 'pos-y', 'neg-y', 'pos-z', 'neg-z'];
     const targets = cubeMapTargets(gl);
-    for (let l = 0; l <= MAX_STAR_TEXTURE_LOD; ++l) {
+    for (let l = 0; l <= 4; ++l) {
       this.numTilesLoadedPerLevel.push(0);
       for (let i = 0; i < 6; ++i) {
         const size = 2048 / (1 << l);
