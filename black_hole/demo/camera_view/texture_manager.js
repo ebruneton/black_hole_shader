@@ -216,7 +216,6 @@ class TextureManager {
     const prefixes = ['pos-x', 'neg-x', 'pos-y', 'neg-y', 'pos-z', 'neg-z'];
     const targets = cubeMapTargets(gl);
     for (let l = 0; l <= 4; ++l) {
-      this.numTilesLoadedPerLevel.push(0);
       for (let i = 0; i < 6; ++i) {
         const size = 2048 / (1 << l);
         const tileSize = Math.min(256, size);
