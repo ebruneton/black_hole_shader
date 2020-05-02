@@ -233,7 +233,7 @@ std::vector<unsigned int> ComputeMipMapTile(
       }
       galaxy_xyz_sum = galaxy_xyz_sum / area * galaxy_scale;
       star_xyz_sum = star_xyz_sum * star_scale;
-      if (level > 4) {
+      if (level > 6) {
         star_xyz_sum = star_xyz_sum / area;
       }
       pixels[i + j * tile_size] = ToRgb9E5(galaxy_xyz_sum);

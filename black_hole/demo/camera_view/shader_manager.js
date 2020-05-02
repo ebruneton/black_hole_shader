@@ -29,6 +29,12 @@
 
 (function() {
 
+// Max LOD for which the manul texture filtering method DefaultStarColor() in
+// model.glsl must be used for stars. Above this level a default anisotropic
+// texture filtering is used instead. Must be consistent with the same constant
+// in texture_manager.js.
+const MAX_STAR_TEXTURE_LOD = 6;
+
 const generateDiscParticleParams = function() {
   const rMin = 3.0;
   const rMax = 12.0;
@@ -122,7 +128,7 @@ class ShaderManager {
             float(${this.model.grid.getValue() ? 128 : 2048});
         const float MAX_FOOTPRINT_SIZE = float(4);
         const float MAX_FOOTPRINT_LOD =
-            float(${this.model.grid.getValue() ? 0 : 4});\n`;
+            float(${this.model.grid.getValue() ? 0 : MAX_STAR_TEXTURE_LOD});\n`;
 
     const gl = this.gl;
     const vertexShader = createShader(

@@ -29,6 +29,12 @@
 
 (function() {
 
+// Max LOD for which the manul texture filtering method DefaultStarColor() in
+// model.glsl must be used for stars. Above this level a default anisotropic
+// texture filtering is used instead. Must be consistent with the same constant
+// in shader_manager.js.
+const MAX_STAR_TEXTURE_LOD = 6;
+
 const cubeMapTargets = function(gl) {
   return [
       gl.TEXTURE_CUBE_MAP_POSITIVE_X,
@@ -99,7 +105,7 @@ class TextureManager {
     this.starTexture2 = null;
     this.tilesQueue = [];
     this.numTilesLoaded = 0;
-    this.numTilesLoadedPerLevel = [0, 0, 0, 0, 0];
+    this.numTilesLoadedPerLevel = [];
     this.numPendingRequests = 0;
 
     const ext = gl.getExtension('EXT_texture_filter_anisotropic');
@@ -185,26 +191,32 @@ class TextureManager {
 
     this.starTexture = createTexture(gl, gl.TEXTURE_CUBE_MAP);
     gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.starTexture);
-    gl.texStorage2D(gl.TEXTURE_CUBE_MAP, 5, gl.RGB9_E5, 2048, 2048);
+    gl.texStorage2D(gl.TEXTURE_CUBE_MAP, MAX_STAR_TEXTURE_LOD + 1, gl.RGB9_E5, 
+                    2048, 2048);
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, 
                      gl.NEAREST_MIPMAP_NEAREST);
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAX_LOD, 4);
-    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAX_LEVEL, 4);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAX_LOD, 
+                     MAX_STAR_TEXTURE_LOD);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAX_LEVEL, 
+                     MAX_STAR_TEXTURE_LOD);
 
     this.starTexture2 = createTexture(gl, gl.TEXTURE_CUBE_MAP);
     gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.starTexture2);
-    gl.texStorage2D(gl.TEXTURE_CUBE_MAP, 7, gl.RGB9_E5, 64, 64);
+    gl.texStorage2D(gl.TEXTURE_CUBE_MAP, 11 - MAX_STAR_TEXTURE_LOD, gl.RGB9_E5, 
+                    2048 / (1 << (MAX_STAR_TEXTURE_LOD + 1)),
+                    2048 / (1 << (MAX_STAR_TEXTURE_LOD + 1)));
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, 
-                     gl.NEAREST_MIPMAP_LINEAR);
-    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+                     gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameterf(gl.TEXTURE_CUBE_MAP, glExt.TEXTURE_MAX_ANISOTROPY_EXT, 
                      gl.getParameter(glExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT));
 
     const base = '../../gaia_sky_map';
     const prefixes = ['pos-x', 'neg-x', 'pos-y', 'neg-y', 'pos-z', 'neg-z'];
     const targets = cubeMapTargets(gl);
-    for (let l = 0; l <= 4; ++l) {
+    for (let l = 0; l <= MAX_STAR_TEXTURE_LOD; ++l) {
+      this.numTilesLoadedPerLevel.push(0);
       for (let i = 0; i < 6; ++i) {
         const size = 2048 / (1 << l);
         const tileSize = Math.min(256, size);
@@ -244,15 +256,16 @@ class TextureManager {
             tileSize, tileSize, gl.RGB, gl.UNSIGNED_INT_5_9_9_9_REV, 
             data.subarray(start, start + tileSize * tileSize), 0);
         start += tileSize * tileSize;
-        if (level <= 4) {
+        if (level <= MAX_STAR_TEXTURE_LOD) {
           gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.starTexture);
           gl.texSubImage2D(target, level, ti * tileSize, tj * tileSize, 
               tileSize, tileSize, gl.RGB, gl.UNSIGNED_INT_5_9_9_9_REV,
               data.subarray(start, start + tileSize * tileSize), 0);
         } else {
           gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.starTexture2);
-          gl.texSubImage2D(target, level - 5, ti * tileSize, tj * tileSize, 
-              tileSize, tileSize, gl.RGB, gl.UNSIGNED_INT_5_9_9_9_REV, 
+          gl.texSubImage2D(target, level - (MAX_STAR_TEXTURE_LOD + 1), 
+              ti * tileSize, tj * tileSize, tileSize, tileSize,
+              gl.RGB, gl.UNSIGNED_INT_5_9_9_9_REV, 
               data.subarray(start, start + tileSize * tileSize), 0);
         }
         start += tileSize * tileSize;
@@ -260,7 +273,7 @@ class TextureManager {
         tileSize /= 2;
       }
       this.numTilesLoaded += 1;
-      if (l <= 4) {
+      if (l <= MAX_STAR_TEXTURE_LOD) {
         this.numTilesLoadedPerLevel[l] += 1;
       }
       this.numPendingRequests -= 1;
