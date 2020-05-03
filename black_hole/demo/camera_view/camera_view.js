@@ -116,7 +116,6 @@ class CameraView {
 
     const kFovY = 50 / 180 * Math.PI;
     const kTanFovY = Math.tan(kFovY / 2);
-    const aspectRatio = this.canvas.width / this.canvas.height;
     const focalLength = this.canvas.height / (2 * kTanFovY);
 
     const gl = this.gl; 

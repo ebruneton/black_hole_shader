@@ -249,14 +249,27 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 e_tau, vec3 e_w,
     float g_k_l_source = e;
     float doppler_factor = g_k_l_receiver / g_k_l_source;
 
-    float lensing_amplification_factor =
-        length(cross(dFdx(q), dFdy(q))) /
-        length(cross(dFdx(d_prime), dFdy(d_prime)));
+    // The solid angle (times 4pi) of the pixel.
+    float omega = length(cross(dFdx(q), dFdy(q)));
+    // The solid angle (times 4pi) of the deflected light beam.
+    float omega_prime = length(cross(dFdx(d_prime), dFdy(d_prime)));
+
+    float lensing_amplification_factor = omega / omega_prime;
     // Clamp the result (otherwise potentially infinite).
     lensing_amplification_factor = min(lensing_amplification_factor, 1e6);
 
+    // The galaxy texture contains the radiant intensity of stars, per unit area
+    // on the celestial sphere, i.e. radiance values (using omega0 as area unit,
+    // with omega0 = 4pi * the solid angle of the center texel of a cube face).
+    // The stars texture contains radiant intensities. To convert the total
+    // intensity inside a pixel to a radiance, this intensity must be divided by
+    // the pixel area on the celestial sphere. Expressed in the units used for
+    // the galaxy texture, this area is omega / omega0 (where, since the galaxy
+    // texture is a 2048x2048 cubemap, omega0 is 1 / 1024^2).
+    float pixel_area = max(omega * (1024.0 * 1024.0), 1.0);
+
     color += GalaxyColor(d_prime);
-    color += StarColor(d_prime, lensing_amplification_factor);
+    color += StarColor(d_prime, lensing_amplification_factor / pixel_area);
     color = Doppler(color, doppler_factor);
   }
   if (u1 >= 0.0 && alpha1 > 0.0) {
