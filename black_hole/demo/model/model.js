@@ -194,6 +194,8 @@ class Model {
     this.p = undefined;
     // The camera 4-velocity, in Schwarzschild coordinates.
     this.kS = undefined;
+    // The camera's vertical field of view.
+    this.fovY = 50 / 180 * Math.PI;
     // The base vectors of the camera reference frame, in (pseudo-)Cartesian
     // coordinates.
     this.eTau = undefined;

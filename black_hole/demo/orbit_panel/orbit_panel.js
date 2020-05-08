@@ -117,7 +117,7 @@ const safeSqrt = function(x) {
 
 class OrbitPanel {
   constructor(rootElement, model) {
-    this.rootElement = rootElement;   
+    this.rootElement = rootElement;
     this.model = model;
     this.model.addListener(this);
 
@@ -129,6 +129,10 @@ class OrbitPanel {
     this.globalTime = rootElement.querySelector('#op_global_time');
     this.timeDilation = rootElement.querySelector('#op_time_dilation');
     this.dot = rootElement.querySelector('#op_dot');
+    this.frustum = [];
+    for (let i = 0; i <= 8; ++i) {
+      this.frustum.push(rootElement.querySelector(`#op_frustum${i}`));
+    }
     this.numberFormat = 
         new Intl.NumberFormat('en-US', {maximumFractionDigits : 1});
 
@@ -188,15 +192,71 @@ class OrbitPanel {
     this.timeDilation.innerText = 
         `${model.timeDilationFactor.toFixed(3)}`;
 
-    const ci = Math.cos(this.model.orbitInclination.getValue());
-    const si = Math.sin(this.model.orbitInclination.getValue());
+    this.drawDotAndFrustum();
+  }
+
+  drawDotAndFrustum() {
+    const model = this.model;
+    const context3d = this.context3d;
+    const ci = Math.cos(model.orbitInclination.getValue());
+    const si = Math.sin(model.orbitInclination.getValue());
     const worldPt = [ci * model.r * Math.cos(model.phi),
                           model.r * Math.sin(model.phi),
                      si * model.r * Math.cos(model.phi)];
-    const screenPt = 
-        this.context3d.toScreenPt(this.context3d.toCameraPt(worldPt));
+    const screenPt = context3d.toScreenPt(context3d.toCameraPt(worldPt));
     this.dot.style.left = `${screenPt[0]}px`;
     this.dot.style.top = `${screenPt[1]}px`;
+ 
+    const tanFovY = Math.tan(model.fovY / 2);
+    const focalLength = 1 / (2 * tanFovY);
+    const aspectRatio = document.body.clientWidth / document.body.clientHeight;
+    const eTau = model.eTau;
+    const eW = model.eW;
+    const eH = model.eH;
+    const eD = model.eD;
+    const getFrustumScreenPt = function(i, j, l) {
+      const w = i * aspectRatio;
+      const h = j;
+      const d = -focalLength;
+      const n = Math.sqrt(w * w + h * h + d * d);
+      const dx = -eTau[1] + (w * eW[1] + h * eH[1] + d * eD[1]) / n;
+      const dy = -eTau[2] + (w * eW[2] + h * eH[2] + d * eD[2]) / n;
+      const dz = -eTau[3] + (w * eW[3] + h * eH[3] + d * eD[3]) / n;
+      const dl = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      const frustumWorldPt = [
+        worldPt[0] + l * dx / dl,
+        worldPt[1] + l * dy / dl,
+        worldPt[2] + l * dz / dl
+      ];
+      return context3d.toScreenPt(context3d.toCameraPt(frustumWorldPt));
+    };
+    const frustumScreenPts = [
+      getFrustumScreenPt(-1, -1, 10),
+      getFrustumScreenPt(-1, 1, 10),
+      getFrustumScreenPt(1, 1, 10),
+      getFrustumScreenPt(1, -1, 10),
+      getFrustumScreenPt(0, 0, 10)
+    ];
+    for (let i = 0; i < 4; ++i) {
+      this.setLine(this.frustum[i], screenPt, frustumScreenPts[i]);
+      this.setLine(this.frustum[i + 4], frustumScreenPts[i], 
+          frustumScreenPts[(i + 1) % 4]);
+    }
+    this.setLine(this.frustum[8], screenPt, frustumScreenPts[4]);
+  }
+
+  setLine(element, p, q) {
+    const dx = q[0] - p[0];
+    const dy = q[1] - p[1];
+    const scale = Math.sqrt(dx * dx + dy * dy);
+    const theta = Math.atan2(dy, dx);
+    const a = scale * Math.cos(theta);
+    const b = scale * Math.sin(theta);
+    const c = -Math.sin(theta);
+    const d = Math.cos(theta);
+    const tx = p[0];
+    const ty = p[1];
+    element.style.transform = `matrix(${a}, ${b}, ${c}, ${d}, ${tx}, ${ty})`;
   }
 
   drawGrid(halfSize, steps, orbitInclination) {

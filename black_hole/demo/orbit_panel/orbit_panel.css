@@ -47,6 +47,16 @@
   transform: translate(-4px, -4px);
 }
 
+.op-frustum {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  background-color: #F00;
+  transform-origin: left center;
+}
+
 .op-info {
   position: absolute;
   left: 0;

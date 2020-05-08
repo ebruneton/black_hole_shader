@@ -114,9 +114,8 @@ class CameraView {
       this.onResize();      
     }
 
-    const kFovY = 50 / 180 * Math.PI;
-    const kTanFovY = Math.tan(kFovY / 2);
-    const focalLength = this.canvas.height / (2 * kTanFovY);
+    const tanFovY = Math.tan(this.model.fovY / 2);
+    const focalLength = this.canvas.height / (2 * tanFovY);
 
     const gl = this.gl; 
     gl.activeTexture(gl.TEXTURE0);
