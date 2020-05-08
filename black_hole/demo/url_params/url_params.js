@@ -76,6 +76,7 @@ class UrlParams {
     this.model = model;
 
     this.params = [];
+    this.params.push(new IntParam('ct', model.cameraTarget));
     this.params.push(new IntParam('cy', model.cameraYaw));
     this.params.push(new IntParam('cp', model.cameraPitch));
     this.params.push(new IntParam('ce', model.exposure));

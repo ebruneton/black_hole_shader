@@ -96,6 +96,14 @@ const State = {
   PAUSED: 'PAUSED'
 };
 
+const Target = {
+  DEFAULT: 0,
+  BLACK_HOLE: 1,
+  LEFT: 2,
+  FORWARD: 3,
+  RIGHT: 4
+};
+
 const safeSqrt = function(x) {
   return Math.sqrt(Math.max(x, 0));
 };
@@ -124,6 +132,8 @@ const vectorMatrixProduct = function(v, m) {
 
 class Model {
   constructor() {
+    this.cameraTarget = 
+        new QuantizedValue(this, (x) => 4 * x, 0, 4);
     this.cameraYaw = 
         new QuantizedValue(this, (x) => 2 * Math.PI * x, 0, 36000);
     this.cameraPitch =
@@ -196,6 +206,8 @@ class Model {
     this.kS = undefined;
     // The camera's vertical field of view.
     this.fovY = 50 / 180 * Math.PI;
+    // The yaw offset added to the user controlled camera yaw.
+    this.cameraYawOffset = 0;
     // The base vectors of the camera reference frame, in (pseudo-)Cartesian
     // coordinates.
     this.eTau = undefined;
@@ -370,9 +382,20 @@ class Model {
         [gamma*v[1],     gv*v[1]*v[0], 1 + gv*v[1]*v[1],     gv*v[1]*v[2]],
         [gamma*v[2],     gv*v[2]*v[0],     gv*v[2]*v[1], 1 + gv*v[2]*v[2]]];
 
+    // Compute the direction the camera should be looking at.
+    this.cameraYawOffset = 0;
+    if (this.state == State.PLAYING) {
+      if (this.cameraTarget.getValue() == Target.BLACK_HOLE) {
+        this.cameraYawOffset = this.getYaw(boost, -1, 0) - Math.PI;
+      } else if (this.cameraTarget.getValue() != Target.DEFAULT) {
+        this.cameraYawOffset = this.getYaw(boost, k_s[1], k_s[3]) - Math.PI +
+            (Target.FORWARD - this.cameraTarget.getValue()) * Math.PI / 2;
+      }
+    }
+
     // Compute the rotation matrix of the camera, in its local reference frame.
-    const cosY = Math.cos(this.cameraYaw.getValue());
-    const sinY = Math.sin(this.cameraYaw.getValue());
+    const cosY = Math.cos(this.cameraYaw.getValue() + this.cameraYawOffset);
+    const sinY = Math.sin(this.cameraYaw.getValue() + this.cameraYawOffset);
     const cosP = Math.cos(this.cameraPitch.getValue());
     const sinP = Math.sin(this.cameraPitch.getValue());
     const cameraRot = [
@@ -383,6 +406,13 @@ class Model {
 
     // The final Lorentz transform is the product of the 3 above matrices.
     this.lorentz = matrixProduct(cameraRot, matrixProduct(boost, orbitRot));
+  }
+
+  getYaw(boost, dr, dphi) {
+    const dt = -Math.sqrt(dr * dr + dphi * dphi);
+    const dr0 = -boost[1][0] * dt + boost[1][1] * dr + boost[1][3] * dphi;
+    const dphi0 = -boost[3][0] * dt + boost[3][1] * dr + boost[3][3] * dphi;
+    return Math.atan2(dphi0, dr0);
   }
 
   updateCameraReferenceFrame() {

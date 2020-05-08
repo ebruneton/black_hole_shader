@@ -144,6 +144,41 @@
   margin-bottom: 16px;
 }
 
+.sp-target-container {
+  width: 200px;
+  margin: 4px 0;        
+  line-height: 0;
+}
+
+.sp-target-container button {
+  width: 24px;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  color: #FFF;
+  cursor: pointer;
+  font-size: 24px;
+  text-align: center;
+  text-shadow: 1px 1px 2px black;
+  user-select: none;
+}
+
+.sp-target-container[select="0"] #sp_target0,
+.sp-target-container[select="1"] #sp_target1,
+.sp-target-container[select="2"] #sp_target2,
+.sp-target-container[select="3"] #sp_target3,
+.sp-target-container[select="4"] #sp_target4 {
+  color: #00F;
+}
+
+.sp-panel:not(.sp-playing) #sp_target1,
+.sp-panel:not(.sp-playing) #sp_target2,
+.sp-panel:not(.sp-playing) #sp_target3,
+.sp-panel:not(.sp-playing) #sp_target4 {
+  display: none;
+}
+
 .sp-play-container {
   width: 192px;
   margin: 4px 0;        

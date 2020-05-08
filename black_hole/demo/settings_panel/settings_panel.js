@@ -131,6 +131,7 @@ class SettingsPanel {
       highDefinitionDiv.classList.toggle('sp-hidden', true);
     }
 
+    this.cameraTarget = this.rootElement.querySelector('#sp_target_container');
     this.exposure =
         new Slider(rootElement, 'exposure', model.exposure);
     this.bloom = 
@@ -176,6 +177,12 @@ class SettingsPanel {
     this.onOrbitChange();
     this.toggleVisibility();
 
+    for (let i = 0; i < 5; ++i) {
+      this.rootElement.querySelector(`#sp_target${i}`).addEventListener(
+          'click', (e) => this.setCameraTarget(i));
+    }
+    this.rootElement.querySelector('#sp_play').addEventListener(
+        'click', (e) => this.model.setState(State.PLAYING));
     this.rootElement.querySelector('#sp_play').addEventListener(
         'click', (e) => this.model.setState(State.PLAYING));
     this.rootElement.querySelector('#sp_pause').addEventListener(
@@ -190,6 +197,10 @@ class SettingsPanel {
   }
 
   onSettingsChange() {
+    this.cameraTarget.setAttribute('select', 
+        this.model.cameraYaw.getValue() == 0 && 
+        this.model.cameraPitch.getValue() == 0 ? 
+            `${this.model.cameraTarget.getValue()}` : '');
     this.exposure.update((v) => `${(Math.log2(v * 1000)).toPrecision(3)}`);
     this.bloom.update((v) => `${(v * 100).toFixed(0)}%`);
     this.highDefinition.update();
@@ -229,6 +240,16 @@ class SettingsPanel {
     } else if (key == 'p') {
       this.model.setState(
           this.model.state == State.PLAYING ? State.PAUSED : State.PLAYING); 
+    } else if (key == 'd') {
+      this.setCameraTarget(0);
+    } else if (key == 'b') {
+      this.setCameraTarget(1);
+    } else if (key == 'l') {
+      this.setCameraTarget(2);
+    } else if (key == 'f') {
+      this.setCameraTarget(3);
+    } else if (key == 'r') {
+      this.setCameraTarget(4);
     } else if (key == ' ') {
       this.toggleVisibility();
     }
@@ -274,6 +295,12 @@ class SettingsPanel {
 
   onMouseUp(event) {
     this.drag = false;
+  }
+
+  setCameraTarget(target) {
+    this.model.cameraTarget.setValue(target);
+    this.model.cameraYaw.setValue(0);
+    this.model.cameraPitch.setValue(0);
   }
 
   toggleVisibility() {
