@@ -130,7 +130,8 @@ class CameraView {
     } else {
       gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureManager.galaxyTexture);
     }
-    const minLod = this.textureManager.getMinLoadedStarTextureLod();
+    const minLod = this.model.grid.getValue() ?
+        0 : this.textureManager.getMinLoadedStarTextureLod();
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_LOD, minLod);
 
     gl.activeTexture(gl.TEXTURE3);
