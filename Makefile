@@ -33,7 +33,7 @@ GPP := g++
 DEMO_SOURCES := \
     $(shell find black_hole/demo/ -type f -name "*" -not -name "demo.html")
 
-demo: output/black_hole/demo/demo.html \
+demo: output/black_hole/demo/demo.html rocket_model \
     black_hole_textures black_body_texture doppler_texture gaia_sky_map_texture
 	@echo "Start an HTTP server in output/ (e.g. with python -m SimpleHTTPServer)"
 	@echo "and open http://localhost:8000/black_hole/demo/demo.html"
@@ -111,6 +111,22 @@ output/bloom/filters.js: output/bloom/bloom_filters_generator
 
 output/bloom/bloom_filters_generator: output/bloom/bloom_filters_generator.o
 	$(GPP) $^ -o $@
+
+# Rocket 3D model and model generator.
+
+rocket_model: output/black_hole/demo/rocket.dat
+
+output/black_hole/demo/rocket.dat: output/rocket/rocket_generator \
+    rocket/color.png \
+    rocket/height.png \
+    rocket/occlusion.png \
+    rocket/roughness.png \
+    rocket/metallic.png
+	mkdir -p $(@D)
+	output/rocket/rocket_generator rocket/ output/black_hole/demo/
+
+output/rocket/rocket_generator: output/rocket/rocket_generator.o
+	$(GPP) $^ -lpng -o $@
 
 # Gaia sky map generator.
 
