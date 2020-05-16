@@ -31,6 +31,7 @@
 // mipmap with a small kernel, and upsampling and adding the filtered images.
 
 const MAX_LEVELS = 9;
+const MAX_FLOAT16 = '6.55e4';
 
 const VERTEX_SHADER =
   `#version 300 es
@@ -57,7 +58,7 @@ const DOWNSAMPLE_SHADER =
         color += wi * wj * texture(source, source_uv + delta_uv).rgb;
       }
     }
-    frag_color = vec4(color, 1.0);
+    frag_color = vec4(min(color, ${MAX_FLOAT16}), 1.0);
   }`;
 
 const BLOOM_SHADER =
@@ -74,7 +75,7 @@ const BLOOM_SHADER =
       vec3 uvw = source_samples_uvw[i];
       color += uvw.z * texture(source, source_uv + uvw.xy).rgb;
     }
-    frag_color = vec4(color, 1.0);
+    frag_color = vec4(min(color, ${MAX_FLOAT16}), 1.0);
   }`;
 
 const UPSAMPLE_SHADER =
@@ -99,7 +100,7 @@ const UPSAMPLE_SHADER =
     vec3 c3 = texture(source, source_uv + source_delta_uv).rgb;
     vec4 weight = WEIGHTS[int(mod(ij.x, 2.0) + 2.0 * mod(ij.y, 2.0))];
     vec3 color = weight.x * c0 + weight.y * c1 + weight.z * c2 + weight.w * c3;
-    frag_color = vec4(color, 1.0);
+    frag_color = vec4(min(color, ${MAX_FLOAT16}), 1.0);
   }`;
 
 const RENDER_SHADER =
