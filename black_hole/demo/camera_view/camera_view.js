@@ -58,8 +58,7 @@ class CameraView {
     this.vertexBuffer = createQuadVertexBuffer(this.gl);
     this.textureManager = new TextureManager(rootElement, this.gl);
     this.shaderManager = new ShaderManager(model, this.textureManager, this.gl);
-    this.bloom = new Bloom(this.gl, this.canvas.width, this.canvas.height,
-        'pow(vec3(1.0) - exp(-exposure * color), vec3(1.0 / 2.2))');
+    this.bloom = new Bloom(this.gl, this.canvas.width, this.canvas.height);
 
     this.lastTauSeconds = Date.now() / 1000.0;
     this.lastFrameTime = undefined;
@@ -180,11 +179,12 @@ class CameraView {
     this.bloom.begin();
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-    gl.vertexAttribPointer(program.vertexAttrib, 2, this.gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(program.vertexAttrib, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(program.vertexAttrib);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-    this.bloom.end(this.model.bloom.getValue(), this.model.exposure.getValue());
+    this.bloom.end(this.model.bloom.getValue(), this.model.exposure.getValue(),
+        this.model.highContrast.getValue());
 
     const tauSeconds = Date.now() / 1000.0;
     const dTauSeconds = tauSeconds - this.lastTauSeconds;

@@ -113,7 +113,26 @@ const RENDER_SHADER =
   uniform vec2 bloom_delta_uv;
   uniform float intensity;
   uniform float exposure;
+  uniform bool high_contrast;
   layout(location=0) out vec4 frag_color;
+
+  vec3 toneMap(vec3 color) {
+    return pow(vec3(1.0) - exp(-color), vec3(1.0 / 2.2));
+  }
+  
+  // ACES tone map, see
+  // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+  vec3 toneMapACES(vec3 color) {
+    const float A = 2.51;
+    const float B = 0.03;
+    const float C = 2.43;
+    const float D = 0.59;
+    const float E = 0.14;
+    color = min(color, 10.0);
+    color = (color * (A * color + B)) / (color * (C * color + D) + E);
+    return pow(color, vec3(1.0 / 2.2));
+  }
+
   void main() {
     vec2 source_uv = (gl_FragCoord.xy + vec2(1.0)) * source_delta_uv;
     vec3 color = texture(bloom, 0.5 * gl_FragCoord.xy * bloom_delta_uv).rgb;
@@ -121,8 +140,12 @@ const RENDER_SHADER =
       vec3 uvw = source_samples_uvw[i];
       color += uvw.z * texture(source, source_uv + uvw.xy).rgb;
     }
-    color = mix(texture(source, source_uv).rgb, color, intensity);
-    color = <TONE_MAPPING>;
+    color = mix(texture(source, source_uv).rgb, color, intensity) * exposure;
+    if (high_contrast) {
+      color = toneMapACES(color);
+    } else {
+      color = toneMap(color);
+    }
     frag_color = vec4(color, 1.0);
   }`;
 
@@ -149,9 +172,7 @@ const createTexture = function(gl, textureUnit, target) {
 // size changes.
 class Bloom {
 
-  // 'toneMappingExpression' must be a GLSL expression, which can depend on the
-  // 'color' and 'exposure' variables, e.g "vec3(1.0) - exp(-exposure * color)".
-  constructor(gl, width, height, toneMappingExpression) {
+  constructor(gl, width, height) {
     this.gl = gl;
     this.width = width;
     this.height = height;
@@ -202,8 +223,7 @@ class Bloom {
     gl.attachShader(this.renderProgram, vertexShader);
     gl.attachShader(this.renderProgram, 
         createShader(gl, gl.FRAGMENT_SHADER, 
-            RENDER_SHADER.replace(/SIZE/g, 25)
-                .replace('<TONE_MAPPING>', toneMappingExpression)));
+            RENDER_SHADER.replace(/SIZE/g, 25)));
     gl.linkProgram(this.renderProgram);
     gl.useProgram(this.renderProgram);
     gl.uniform1i(gl.getUniformLocation(this.renderProgram, 'source'), 0);
@@ -212,6 +232,8 @@ class Bloom {
         gl.getUniformLocation(this.renderProgram, 'intensity');
     this.renderProgram.exposureUniform = 
         gl.getUniformLocation(this.renderProgram, 'exposure');
+    this.renderProgram.highContrastUniform = 
+        gl.getUniformLocation(this.renderProgram, 'high_contrast');
     this.renderProgram.sourceDeltaUvUniform = 
         gl.getUniformLocation(this.renderProgram, 'source_delta_uv');
     this.renderProgram.bloomDeltaUvUniform = 
@@ -324,7 +346,7 @@ class Bloom {
         this.mipmapTextures[0].height - 2);
   }
 
-  end(intensity, exposure) {
+  end(intensity, exposure, highContrast) {
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE0);
 
@@ -403,6 +425,7 @@ class Bloom {
     }
     gl.uniform1f(program.intensityUniform, intensity);
     gl.uniform1f(program.exposureUniform, exposure);
+    gl.uniform1i(program.highContrastUniform, highContrast ? 1 : 0);
     this.drawQuad(program);
   }
 

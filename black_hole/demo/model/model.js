@@ -144,6 +144,8 @@ class Model {
         new QuantizedValue(this, (x) => x, 500);
     this.highDefinition =
         new BooleanValue(this, false);
+    this.highContrast =
+        new BooleanValue(this, false);
     this.startRadius = 
         new QuantizedValue(this, (x) => Math.max(1 + 39 * x * x, 1.01), 940);
     this.startDirection = 

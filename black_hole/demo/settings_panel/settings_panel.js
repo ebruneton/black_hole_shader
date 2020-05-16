@@ -138,6 +138,8 @@ class SettingsPanel {
         new Slider(rootElement, 'bloom', model.bloom);
     this.highDefinition =
         new Checkbox(rootElement, 'high_definition', model.highDefinition);
+    this.highContrast =
+        new Checkbox(rootElement, 'high_contrast', model.highContrast);
     this.startRadius = 
         new Slider(rootElement, 'start_radius', model.startRadius);
     this.startDirection = 
@@ -204,6 +206,7 @@ class SettingsPanel {
     this.exposure.update((v) => `${(Math.log2(v * 1000)).toPrecision(3)}`);
     this.bloom.update((v) => `${(v * 100).toFixed(0)}%`);
     this.highDefinition.update();
+    this.highContrast.update();
     this.startRadius.update((v) => `${v.toPrecision(3)}`);
     this.startDirection.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);
     this.startSpeed.update((v) => `${v.toPrecision(3)}`);
