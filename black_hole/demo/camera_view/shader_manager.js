@@ -52,7 +52,7 @@ const generateDiscParticleParams = function() {
 
   let ringParams = '';
   let numRings = 0;
-  for (let r1 = rMin; r1 < rMax; r1 += 0.2) {
+  for (let r1 = rMin; r1 < rMax; r1 += 0.75) {
     const e = 0.1 * Math.random();
     const r2 = r1 * (1.0 + e) / (1.0 - e);
     const u1 = 1 / r2;
@@ -186,6 +186,8 @@ class ShaderManager {
         gl.getUniformLocation(program, 'black_body_texture');
     program.dopplerTexture =
         gl.getUniformLocation(program, 'doppler_texture');
+    program.noiseTexture = 
+        gl.getUniformLocation(program, 'noise_texture');
     program.discParams =
         gl.getUniformLocation(program, 'disc_params');
 

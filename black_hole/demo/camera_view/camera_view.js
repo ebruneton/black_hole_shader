@@ -145,6 +145,9 @@ class CameraView {
     gl.activeTexture(gl.TEXTURE6);
     gl.bindTexture(gl.TEXTURE_3D, this.textureManager.dopplerTexture);
 
+    gl.activeTexture(gl.TEXTURE7);
+    gl.bindTexture(gl.TEXTURE_2D, this.textureManager.noiseTexture);
+
     gl.useProgram(program);
     gl.uniform3f(program.cameraSize, 
         this.canvas.width / 2, this.canvas.height / 2, focalLength);
@@ -171,6 +174,7 @@ class CameraView {
     gl.uniform1f(program.minStarsLod, minLod);
     gl.uniform1i(program.blackBodyTexture, 5);
     gl.uniform1i(program.dopplerTexture, 6);
+    gl.uniform1i(program.noiseTexture, 7);
     gl.uniform3f(program.discParams, 
         this.model.discDensity.getValue(),
         this.model.discOpacity.getValue(), 

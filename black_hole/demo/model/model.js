@@ -163,13 +163,13 @@ class Model {
     this.grid =
         new BooleanValue(this, false);
     this.blackHoleMass = 
-        new QuantizedValue(this, (x) => 10 * Math.pow(10, 6 * x), 330);
+        new QuantizedValue(this, (x) => 10 * Math.pow(10, 6 * x), 384);
     this.discDensity = 
         new QuantizedValue(this, (x) => 100 * Math.pow(x, 10), 500);
     this.discOpacity =
         new QuantizedValue(this, (x) => x, 300);
     this.discTemperature = 
-        new QuantizedValue(this, (x) => 1000 * Math.pow(10, x), 350);
+        new QuantizedValue(this, (x) => 1000 * Math.pow(10, x), 430);
     this.starsYaw = 
         new QuantizedValue(this, (x) => 2 * Math.PI * (x - 0.5), 1800, 3600);
     this.starsPitch = 

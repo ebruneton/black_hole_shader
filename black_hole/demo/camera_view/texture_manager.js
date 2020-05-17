@@ -88,6 +88,28 @@ const loadIntTextureData = function(textureDataUrl, callback) {
   xhr.send();
 };
 
+const loadNoiseTexture = function(gl, glExt, textureUrl) {
+  const texture = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
+                   gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameterf(gl.TEXTURE_2D, glExt.TEXTURE_MAX_ANISOTROPY_EXT, 
+                   gl.getParameter(glExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT));
+  const image = new Image();
+  image.addEventListener('load', function() {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, gl.RED, gl.UNSIGNED_BYTE, image);
+    gl.generateMipmap(gl.TEXTURE_2D);
+  });
+  image.src = textureUrl;
+  return texture;
+}
+
+
 class TextureManager {
   constructor(rootElement, gl) {
     this.loadingPanel = rootElement.querySelector('#cv_loading_panel');
@@ -111,6 +133,7 @@ class TextureManager {
     const ext = gl.getExtension('EXT_texture_filter_anisotropic');
     this.loadTextures(ext);
     this.loadStarTextures(ext);
+    this.noiseTexture = loadNoiseTexture(gl, ext, 'noise_texture.png');
 
     document.body.addEventListener('keypress', (e) => this.onKeyPress(e)); 
   }

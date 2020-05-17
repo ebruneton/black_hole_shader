@@ -55,6 +55,9 @@ vec3 StarTextureColor(vec3 dir, float lod, out vec2 sub_position);
 // - color of the stars in the footprint of the pixel in direction 'dir', times
 //   the given gravitational lensing amplification factor.
 vec3 StarColor(vec3 dir, float lensing_amplification_factor);
+// - noise function used in the default accretion disc shading function 
+//   'DefaultDiscColor()'.
+float Noise(vec2 uv);
 // - color and opacity of the accretion disc at 'p', and at time 't', for the
 //   top or bottom side of the disc, and with the given Doppler factor.
 vec4 DiscColor(vec2 p, float t, bool top_side, float doppler_factor);
@@ -164,7 +167,7 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
   float p_r = length(p);
   float p_phi = atan(p.y, p.x);
 
-  float density = 2.0;
+  float density = 0.0;
   for (int i = 0; i < NUM_DISC_PARTICLES; ++i) {
     vec4 params = DISC_PARTICLE_PARAMS[i];
     float u1 = params.x;
@@ -177,8 +180,9 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
     float a = mod(p_phi - phi, 2.0 * pi);
     float s = sin(dtheta_dphi * (a + phi));
     float r = 1.0 / (u1 + (u2 - u1) * s * s);
-    vec2 d = vec2((a - pi) / pi, r - p_r);
-    density += smoothstep(1.0, 0.0, length(d));
+    vec2 d = vec2(a - pi, r - p_r) * vec2(1.0 / pi, 0.5);
+    float noise = Noise(d * vec2(p_r / OUTER_DISC_R, 1.0));
+    density += smoothstep(1.0, 0.0, length(d)) * noise;
   }
 
   const float r_max = 49.0 / 12.0;
@@ -189,10 +193,10 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
   float temperature =
       disc_temperature * temperature_profile * (1.0 / temperature_profile_max);
 
-  vec3 color = density *
-               BlackBodyColor(black_body_texture, temperature * doppler_factor);
+  vec3 color = max(density, 0.0) *
+      BlackBodyColor(black_body_texture, temperature * doppler_factor);
   float alpha = smoothstep(INNER_DISC_R, INNER_DISC_R * 1.2, p_r) *
-                smoothstep(OUTER_DISC_R, OUTER_DISC_R / 1.2, p_r);
+      smoothstep(OUTER_DISC_R, OUTER_DISC_R / 1.2, p_r);
   return vec4(color * alpha, alpha);
 }
 

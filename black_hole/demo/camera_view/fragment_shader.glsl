@@ -48,6 +48,7 @@ uniform float min_stars_lod;
 
 uniform sampler2D black_body_texture;
 uniform highp sampler3D doppler_texture;
+uniform sampler2D noise_texture;
 uniform vec3 disc_params;
 
 in vec3 view_dir;
@@ -153,6 +154,10 @@ vec4 GridDiscColor(vec2 p, float t, bool top_side, float doppler_factor,
   vec3 color = BlackBodyColor(black_body_texture, temperature * doppler_factor);
   color *= 0.2 + 0.8 * value_phi * value_r;
   return vec4(top_side ? color : color * 0.01, 1.0);
+}
+
+float Noise(vec2 uv) {
+  return 3.0 * (texture(noise_texture, uv).r - 0.5) + 1.0;
 }
 
 vec4 DiscColor(vec2 p, float t, bool top_side, float doppler_factor) {
