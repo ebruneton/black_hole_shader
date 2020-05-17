@@ -89,12 +89,13 @@ class UrlParams {
     this.params.push(new IntParam('oi', model.orbitInclination));
     this.params.push(new BoolParam('pl', model.lensing));
     this.params.push(new BoolParam('pd', model.doppler));
-    this.params.push(new BoolParam('sr', model.rocket));
     this.params.push(new BoolParam('sg', model.grid));
     this.params.push(new IntParam('bhm', model.blackHoleMass));
     this.params.push(new IntParam('dd', model.discDensity));
     this.params.push(new IntParam('do', model.discOpacity));
     this.params.push(new IntParam('dt', model.discTemperature));
+    this.params.push(new IntParam('srd', model.rocketDistance));
+    this.params.push(new BoolParam('sr', model.rocket));
     this.params.push(new IntParam('sfy', model.starsYaw));
     this.params.push(new IntParam('sfp', model.starsPitch));
     this.params.push(new IntParam('sfr', model.starsRoll));

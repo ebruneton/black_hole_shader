@@ -152,8 +152,6 @@ class SettingsPanel {
         new Checkbox(rootElement, 'lensing', model.lensing);
     this.doppler = 
         new Checkbox(rootElement, 'doppler', model.doppler);
-    this.rocket = 
-        new Checkbox(rootElement, 'rocket', model.rocket);
     this.grid = 
         new Checkbox(rootElement, 'grid', model.grid);
     this.blackHoleMass = 
@@ -164,6 +162,10 @@ class SettingsPanel {
         new Slider(rootElement, 'disc_opacity', model.discOpacity);
     this.discTemperature =
         new Slider(rootElement, 'disc_temperature', model.discTemperature);
+    this.rocketDistance =
+        new Slider(rootElement, 'rocket_distance', model.rocketDistance);
+    this.rocket = 
+        new Checkbox(rootElement, 'rocket', model.rocket);
     this.starsYaw =
         new Slider(rootElement, 'stars_yaw', model.starsYaw);
     this.starsPitch =
@@ -214,12 +216,13 @@ class SettingsPanel {
     this.orbitInclination.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);
     this.lensing.update();
     this.doppler.update();
-    this.rocket.update();
     this.grid.update();
     this.blackHoleMass.update((v) => `${v.toExponential(2)}`);
     this.discDensity.update((v) => `${v.toExponential(2)}`);
     this.discOpacity.update((v) => `${(v * 100).toFixed(1)}%`);
     this.discTemperature.update((v) => `${v.toFixed(0)}K`);
+    this.rocketDistance.update((v) => `${v.toFixed(1)}m`);
+    this.rocket.update();
     this.starsYaw.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);
     this.starsPitch.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);
     this.starsRoll.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);

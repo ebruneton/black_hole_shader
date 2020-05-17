@@ -158,8 +158,6 @@ class Model {
         new BooleanValue(this, true);
     this.doppler =
         new BooleanValue(this, true);
-    this.rocket =
-        new BooleanValue(this, false);
     this.grid =
         new BooleanValue(this, false);
     this.blackHoleMass = 
@@ -170,6 +168,10 @@ class Model {
         new QuantizedValue(this, (x) => x, 300);
     this.discTemperature = 
         new QuantizedValue(this, (x) => 1000 * Math.pow(10, x), 430);
+    this.rocketDistance =
+        new QuantizedValue(this, (x) => 30 + 50 * x, 500);
+    this.rocket =
+        new BooleanValue(this, false);
     this.starsYaw = 
         new QuantizedValue(this, (x) => 2 * Math.PI * (x - 0.5), 1800, 3600);
     this.starsPitch = 

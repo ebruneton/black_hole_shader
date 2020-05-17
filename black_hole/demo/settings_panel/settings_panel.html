@@ -200,12 +200,6 @@
         <summary>Scene</summary>
 
         <div class="sp-setting" 
-             title="Shows the observer's rocket">
-          <label for="sp_rocket">Rocket</label>
-          <input type="checkbox" id="sp_rocket">
-        </div>
-
-        <div class="sp-setting" 
              title="Enables non-realistic grid patterns\n \
                     (to better illustrate the physical phenomena)">
           <label for="sp_grid">Grid</label>
@@ -257,6 +251,27 @@
               <button type="button">+</button>
             </span>
             <span id="sp_disc_temperature_value" class="sp-value"></span>
+          </div>
+        </div>
+
+        <h3>Rocket</h3>
+
+        <div class="sp-settings-container">
+          <div class="sp-setting" 
+               title="Average distance from the rocket (in meters)">
+            <label>Distance</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_rocket_distance">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_rocket_distance_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting" 
+               title="Shows the observer's rocket">
+            <label for="sp_rocket">Rocket</label>
+            <input type="checkbox" id="sp_rocket">
           </div>
         </div>
 

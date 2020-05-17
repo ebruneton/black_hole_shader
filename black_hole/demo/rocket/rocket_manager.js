@@ -29,7 +29,6 @@
 
 (function() {
 
-const CAMERA_DIST = 40;
 const NEAR_PLANE = 0.01;
 const FAR_PLANE = 100;
 
@@ -317,15 +316,19 @@ class RocketManager {
   setCameraUniforms(program) {
     const yaw = this.model.cameraYaw.getValue() + this.model.cameraYawOffset -
         this.model.rocketYaw;
+    const cameraDist = this.model.rocketDistance.getValue() / 2;
+    const offsetDist = 0.4 * cameraDist;
+    const tx = -offsetDist * Math.sin(this.model.rocketYaw);
+    const tz = offsetDist * Math.cos(this.model.rocketYaw);
     const cy = Math.cos(yaw);
     const sy = Math.sin(yaw);
     const cp = Math.cos(this.model.cameraPitch.getValue());
     const sp = Math.sin(this.model.cameraPitch.getValue());
     const modelViewMatrix = [
-      [      cy,  0,      -sy,            0],
-      [-sy * sp, cp, -cy * sp,            0],
-      [ sy * cp, sp,  cy * cp, -CAMERA_DIST],
-      [       0,  0,        0,            1],
+      [      cy,  0,      -sy,                    cy * tx      - sy * tz],
+      [-sy * sp, cp, -cy * sp,             - sy * sp * tx - cy * sp * tz],
+      [ sy * cp, sp,  cy * cp, -cameraDist + sy * cp * tx + cy * cp * tz],
+      [       0,  0,        0,                                         1]
     ];
 
     const f = 1 / Math.tan(this.model.fovY / 2);
@@ -349,11 +352,16 @@ class RocketManager {
         }
       }
     }
-
     this.gl.uniformMatrix4fv(program.modelViewProjMatrix, false,
         modelViewProjMatrix);
-    this.gl.uniform3f(program.camera, 
-        CAMERA_DIST * sy * cp, CAMERA_DIST * sp, CAMERA_DIST * cy * cp);
+
+    const camera = [0, 0, 0, 1];
+    for (let i = 0; i < 3; ++i) {
+      for (let j = 0; j < 3; ++j) {
+        camera[i] -= modelViewMatrix[j][i] * modelViewMatrix[j][3];
+      }
+    }
+    this.gl.uniform3f(program.camera, camera[0], camera[1], camera[2]);
   }
 }
 
