@@ -1,0 +1,143 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% MODIFIED VERSION OF ORIGINAL pseudocode.sty file.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%
+%% January 14, 2004
+%%
+%% pseudocode.sty
+%%
+%%  S O F T W A R E   L I C E N S E
+%% =================================
+%%
+%% The file  pseudocode.sty
+%% is referred to as `the pseudocode package'
+%% or simply `the package'.
+%%
+%% The pseudocode package is copyright 1999 D.L. Kreher and D.R. Stinson.
+%%
+%% The pseudocode package and its drivers may be distributed and/or modified
+%% under the conditions of the LaTeX Project Public License, either version
+%% 1.3 of this license or (at your option) any later version.
+%% The latest version of this license is in
+%%   http://www.latex-project.org/lppl.txt
+%% and version 1.3 or later is part of all distributions of LaTeX
+%% version 2003/12/01 or later.
+%%
+%% The package has the LPPL maintenance status "maintained".
+%%
+%% The Current Maintainer is Donald L. Kreher.
+%%
+%% end of software license
+%%
+%% E-MAIL:   kreher@mtu.edu    dstinson@uwaterloo.ca
+%%
+%% DESCRIPTION:
+%%   pseudocode.sty is a LaTeX style option, consisting of:
+%%   the environment pseudocode
+%%
+%% INSTALLATION:
+%%   Put this file where your TeX looks for inputs.
+%%
+%% DOCUMENTATION:
+%%  See pseudocode.tex.
+%%
+%%  \RETURN altered  Oct 22, 1999
+%%  Allowed for two column  formating  Dec 2, 2002
+%%  \BREAK for breaking out of loops added Oct 10, 2003
+%%  \FORALL  added Oct 10, 2003
+%%
+%% CODE:
+\typeout{**                                           }
+\typeout{** Document Style `pseudocode' - environment }
+\typeout{** by D.L. Kreher and D.R. Stinson           }
+\typeout{**                                           }
+\typeout{** The pseudocode environment was originally developed for the book}
+\typeout{** Combinatorial Algorithms: Enumeration, Generation, and Search}
+\typeout{** CRC Press, 1999. }
+
+%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{pseudocode}
+%
+\if@twocolumn
+\newlength{\pcode@width}
+\setlength{\pcode@width}{\columnwidth}
+\addtolength{\pcode@width}{-40pt}
+\else
+\newlength{\pcode@width}
+\setlength{\pcode@width}{\textwidth}
+\addtolength{\pcode@width}{-40pt}
+\fi
+%
+\RequirePackage{ifthen}
+%
+\newcommand{\pcode@AF}[1]{\mbox{\textsc{#1}}} % Algorithm font
+\newcommand{\pcode@tab}[1]{\hspace*{#1ex}}
+%
+%
+\newenvironment{pseudocode}[1][plain]
+{%
+ \noindent\begin{math}\begin{array}{@{\pcode@tab{1}}lr@{}}%
+}%
+{%
+  \end{array}\end{math}
+}%
+%
+\newcommand{\LOCAL}[1]{\mbox{\bfseries local}\pcode@tab{1}#1}
+\newcommand{\GLOBAL}[1]{\mbox{\bfseries global}\pcode@tab{1}#1}
+\newcommand{\EXTERNAL}[1]{\mbox{\bfseries external}\pcode@tab{1}#1}
+\newcommand{\COMMENT}[1]%
+{%
+ \vspace*{1ex}%
+ \mbox{\bfseries comment:}\pcode@tab{.5} \mbox{#1}
+}
+\newcommand{\BEGIN}{\begin{array}{@{}lr@{}}}
+\newcommand{\END}{\end{array}}
+\newcommand{\PROCEDURE}[2]%
+{%
+ \mbox{\bfseries procedure }\pcode@AF{#1}(\ensuremath{#2})\\%
+ \begin{array}{@{\pcode@tab{1}}l@{}}%
+}
+\newcommand{\ENDPROCEDURE}{\end{array}\\ }
+\newcommand{\CALL}[2]{\pcode@AF{#1}(#2)} % 
+\newcommand{\MAIN}{\mbox{\bfseries main}\\\begin{array}{@{\pcode@tab{1}}lr@{}}}
+\newcommand{\ENDMAIN}{\end{array}}
+\newcommand{\RETURN}[1]{\ifthenelse{\equal{#1}{} }%
+{\mbox{\bfseries return }}%
+{\mbox{\bfseries return }(#1)}}
+\newcommand{\OUTPUT}[1]{\mbox{\bfseries output }(#1)}
+\newcommand{\EXIT}{\mbox{\bfseries exit }}
+\newcommand{\BREAK}{\mbox{\bfseries break }}
+\newcommand{\IF}{\mbox{\bfseries if }}
+\newcommand{\LET}{\mbox{\bfseries let }}
+\newcommand{\CTHEN}{\mbox{ \bfseries then }}
+\newcommand{\CELSE}{\mbox{ \bfseries else }}
+\newcommand{\THEN}{\pcode@tab{1}\mbox{ \bfseries then }}
+\newcommand{\ELSE}{\pcode@tab{1}\mbox{ \bfseries else }}
+\newcommand{\ELSEIF}{\\\pcode@tab{1}\mbox{ \bfseries else if }}
+\newcommand{\FOREACH}{\mbox{\bfseries for each }}
+\newcommand{\FORALL}{\mbox{\bfseries for all }}
+\newcommand{\FOR}{\mbox{\bfseries for }}
+\newcommand{\TO}{\mbox{ \bfseries to }}
+\newcommand{\DOWNTO}{\mbox{ \bfseries downto }}
+\newcommand{\CASE}{\mbox{\bfseries case }}
+\newcommand{\OF}{\\\pcode@tab{1}\mbox{ \bfseries of }\BEGIN}
+\newcommand{\ENDCASE}{\END}
+\newcommand{\AND}{\mbox{ \bfseries and }}
+\newcommand{\OR}{\mbox{ \bfseries or }}
+\newcommand{\NOT}{\mbox{ \bfseries not }}
+\newcommand{\SUCCESS}{\mbox{ \bfseries success }}
+\newcommand{\FAIL}{\mbox{ \bfseries fail }}
+\newcommand{\TRUE}{\mbox{ \bfseries true }}
+\newcommand{\FALSE}{\mbox{ \bfseries false }}
+\newcommand{\GOTO}{\mbox{\bfseries go to }}
+\newcommand{\DO}{\\\pcode@tab{1}}
+\newcommand{\ADO}{\mbox{ \bfseries do }}
+\newcommand{\WHILE}{\mbox{\bfseries while }}
+\newcommand{\REPEAT}{\mbox{\bfseries repeat }\\\begin{array}{@{\pcode@tab{1}}lr@{}}}
+\newcommand{\UNTIL}{\end{array}\\\mbox{\bfseries until }}
+\newcommand{\GETS}{\leftarrow}
+\endinput
+%% END pseudodcode.sty
+
