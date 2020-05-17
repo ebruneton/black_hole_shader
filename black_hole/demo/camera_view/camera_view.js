@@ -27,7 +27,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-(function(model, Bloom, TextureManager, ShaderManager) {
+(function(model, Bloom, TextureManager, ShaderManager, RocketManager) {
 
 const createQuadVertexBuffer = function(gl) {
   const vertexBuffer = gl.createBuffer();
@@ -58,6 +58,7 @@ class CameraView {
     this.vertexBuffer = createQuadVertexBuffer(this.gl);
     this.textureManager = new TextureManager(rootElement, this.gl);
     this.shaderManager = new ShaderManager(model, this.textureManager, this.gl);
+    this.rocketManager = new RocketManager(model, this.gl);
     this.bloom = new Bloom(this.gl, this.canvas.width, this.canvas.height);
 
     this.lastTauSeconds = Date.now() / 1000.0;
@@ -112,6 +113,10 @@ class CameraView {
     if (this.devicePixelRatio != this.getDevicePixelRatio()) {
       this.onResize();      
     }
+
+    const tauSeconds = Date.now() / 1000.0;
+    const dTauSeconds = tauSeconds - this.lastTauSeconds;
+    this.lastTauSeconds = tauSeconds;
 
     const tanFovY = Math.tan(this.model.fovY / 2);
     const focalLength = this.canvas.height / (2 * tanFovY);
@@ -186,13 +191,18 @@ class CameraView {
     gl.vertexAttribPointer(program.vertexAttrib, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(program.vertexAttrib);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.disableVertexAttribArray(program.vertexAttrib);
+
+    if (this.model.rocket.getValue()) {
+      this.rocketManager.drawRocket();
+      if (this.model.gForce > 0) {
+        this.rocketManager.drawExhaust(tauSeconds, this.model.gForce);
+      }
+    }
 
     this.bloom.end(this.model.bloom.getValue(), this.model.exposure.getValue(),
         this.model.highContrast.getValue());
 
-    const tauSeconds = Date.now() / 1000.0;
-    const dTauSeconds = tauSeconds - this.lastTauSeconds;
-    this.lastTauSeconds = tauSeconds;
     this.model.updateOrbit(dTauSeconds);
 
     requestAnimationFrame(() => this.onRender());
@@ -270,4 +280,5 @@ window.addEventListener('DOMContentLoaded', () => {
 })(BlackHoleShaderDemoApp.model,
     BlackHoleShaderDemoApp.Bloom,
     BlackHoleShaderDemoApp.TextureManager,
-    BlackHoleShaderDemoApp.ShaderManager);
+    BlackHoleShaderDemoApp.ShaderManager,
+    BlackHoleShaderDemoApp.RocketManager);

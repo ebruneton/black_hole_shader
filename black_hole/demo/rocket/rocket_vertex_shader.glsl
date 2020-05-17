@@ -1,8 +1,4 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-<!--
+/**
  * Copyright (c) 2020 Eric Bruneton
  * All rights reserved.
  *
@@ -29,36 +25,16 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
--->
-    <title>camera_view tests</title>
-    <link rel="stylesheet" type="text/css" href="camera_view.css"/>
-  </head>
-  <body>
-    <div class="cv-container">
-      <canvas id="camera_view" width="400" height="300"></canvas>
-      <div id="cv_error_panel" class="cv-error-panel cv-hidden">
-      </div>
-      <div id="cv_loading_panel" class="cv-loading-panel">
-        <span>Loading stars data...</span>
-        <div class="cv-loading-bar">
-          <div id="cv_loading_bar" class="cv-loading-bar-value"></div>
-        </div>
-        <span>Press <em>space</em> to show / hide the User Interface</span>
-      </div>
-      <div class="cv-copyright">@2020 Eric Bruneton. 
-        <a href="https://github.com/ebruneton/black_hole_shader"
-           target="_blank">
-          GitHub project
-        </a>. Star data from 
-        <a href="https://www.cosmos.esa.int/web/gaia/dr2" 
-           target="_blank">
-          Gaia DR2
-        </a> and 
-        <a href="https://www.cosmos.esa.int/web/hipparcos/tycho-2" 
-           target="_blank">
-          Tycho 2
-        </a>
-      </div>
-    </div>
-  </body>
-</html>
+ */
+
+uniform mat4 model_view_proj_matrix;
+
+layout(location = 0) in vec3 position_attribute;
+layout(location = 1) in vec2 uv_attribute;
+
+out vec2 uv;
+
+void main() {
+  uv = uv_attribute;
+  gl_Position = model_view_proj_matrix * vec4(position_attribute, 1.0);
+}

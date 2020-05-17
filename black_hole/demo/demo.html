@@ -47,6 +47,7 @@
 @include output/bloom/bloom.js
 BlackHoleShaderDemoApp.Bloom = Bloom;
 })();
+@include output/black_hole/demo/rocket/rocket_manager.js
 @include output/black_hole/demo/camera_view/texture_manager.js
 @include output/black_hole/demo/camera_view/shader_manager.js
 @include output/black_hole/demo/camera_view/camera_view.js
@@ -55,6 +56,18 @@ BlackHoleShaderDemoApp.Bloom = Bloom;
     </script>
   </head>
   <body>
+    <script type="x-shader/x-vertex" id="exhaust_vertex_shader">
+@include output/black_hole/demo/rocket/exhaust_vertex_shader.glsl
+    </script>
+    <script type="x-shader/x-fragment" id="exhaust_fragment_shader">
+@include output/black_hole/demo/rocket/exhaust_fragment_shader.glsl
+    </script>
+    <script type="x-shader/x-vertex" id="rocket_vertex_shader">
+@include output/black_hole/demo/rocket/rocket_vertex_shader.glsl
+    </script>
+    <script type="x-shader/x-fragment" id="rocket_fragment_shader">
+@include output/black_hole/demo/rocket/rocket_fragment_shader.glsl
+    </script>
     <script type="x-shader/x-vertex" id="vertex_shader">
 @include output/black_hole/demo/camera_view/vertex_shader.glsl
     </script>

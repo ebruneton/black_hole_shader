@@ -152,7 +152,8 @@ class SettingsPanel {
         new Checkbox(rootElement, 'lensing', model.lensing);
     this.doppler = 
         new Checkbox(rootElement, 'doppler', model.doppler);
-    /* TODO: add the 'rocket' setting. */
+    this.rocket = 
+        new Checkbox(rootElement, 'rocket', model.rocket);
     this.grid = 
         new Checkbox(rootElement, 'grid', model.grid);
     this.blackHoleMass = 
@@ -213,6 +214,7 @@ class SettingsPanel {
     this.orbitInclination.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);
     this.lensing.update();
     this.doppler.update();
+    this.rocket.update();
     this.grid.update();
     this.blackHoleMass.update((v) => `${v.toExponential(2)}`);
     this.discDensity.update((v) => `${v.toExponential(2)}`);

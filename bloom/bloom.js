@@ -257,10 +257,10 @@ class Bloom {
         this.filterTextures.push(null);
       }
     }
-    this.resize(width, height);
 
     this.mipmapFbos = [];
     this.filterFbos = [];
+    this.depthBuffer = undefined;
     for (let i = 0; i < MAX_LEVELS; ++i) {
       const mipmapFbo = gl.createFramebuffer();
       this.mipmapFbos.push(mipmapFbo);
@@ -274,10 +274,18 @@ class Bloom {
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
             gl.TEXTURE_2D, this.filterTextures[i], 0);
       } else {
+        this.depthBuffer = gl.createRenderbuffer();
+        gl.bindRenderbuffer(gl.RENDERBUFFER, this.depthBuffer);
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16,
+            this.mipmapTextures[0].width, this.mipmapTextures[0].height);
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT,
+            gl.RENDERBUFFER, this.depthBuffer);
         this.filterFbos.push(null);
       }
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    this.resize(width, height);
   }
 
   resize(width, height) {
@@ -302,6 +310,10 @@ class Bloom {
            gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.FLOAT, null);
         this.filterTextures[level].width = w;
         this.filterTextures[level].height = h;
+      } else {
+        gl.bindRenderbuffer(gl.RENDERBUFFER, this.depthBuffer);
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16,
+            this.mipmapTextures[0].width, this.mipmapTextures[0].height);
       }
       level += 1;
       w = Math.ceil(w / 2);

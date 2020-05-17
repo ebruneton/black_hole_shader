@@ -159,7 +159,7 @@ class Model {
     this.doppler =
         new BooleanValue(this, true);
     this.rocket =
-        new BooleanValue(this, true);
+        new BooleanValue(this, false);
     this.grid =
         new BooleanValue(this, false);
     this.blackHoleMass = 
@@ -216,6 +216,18 @@ class Model {
     this.eW = undefined;
     this.eH = undefined;
     this.eD = undefined;
+
+    // The orientation of the rocket (tangent to the orbit).
+    this.rocketYaw = 0;
+    // The Lorentz transformation matrix specifying the current rocket
+    // orientation and velocity.
+    this.rocketLorentz = undefined;
+    // The base vectors of the rocket reference frame, in (pseudo-)Cartesian
+    // coordinates.
+    this.rocketTau = undefined;
+    this.rocketW = undefined;
+    this.rocketH = undefined;
+    this.rocketD = undefined;
 
     this.blackHoleRadiusMeters = undefined;
     this.speedMetersPerSecond = undefined;
@@ -288,8 +300,8 @@ class Model {
   updateDerivedValues() {
     this.updateStarsMatrix();
     this.updateCameraCoordinates();
-    this.updateCameraLorentzTransform();
-    this.updateCameraReferenceFrame();
+    this.updateCameraAndRocketLorentzTransforms();
+    this.updateCameraAndRocketReferenceFrames();
     this.updateOrbitInfo();
   }
 
@@ -336,7 +348,7 @@ class Model {
     this.worldPhi = Math.atan2(sphi, cphi * ci);
   }
 
-  updateCameraLorentzTransform() {
+  updateCameraAndRocketLorentzTransforms() {
     // Compute the 4-velocity vector of the camera (in rotated Schwarzschild
     // coordinates such that its orbit is in the equatorial plane).
     const e = this.e;
@@ -394,7 +406,6 @@ class Model {
             (Target.FORWARD - this.cameraTarget.getValue()) * Math.PI / 2;
       }
     }
-
     // Compute the rotation matrix of the camera, in its local reference frame.
     const cosY = Math.cos(this.cameraYaw.getValue() + this.cameraYawOffset);
     const sinY = Math.sin(this.cameraYaw.getValue() + this.cameraYawOffset);
@@ -408,6 +419,24 @@ class Model {
 
     // The final Lorentz transform is the product of the 3 above matrices.
     this.lorentz = matrixProduct(cameraRot, matrixProduct(boost, orbitRot));
+
+    // Compute the direction of the rocket.
+    if (this.state == State.PLAYING) {
+      this.rocketYaw = this.getYaw(boost, k_s[1], k_s[3]);
+    } else {
+      this.rocketYaw = 0;
+    }
+    // Compute the rotation matrix of the rocket.
+    const cosRy = Math.cos(this.rocketYaw);
+    const sinRy = Math.sin(this.rocketYaw);
+    const rocketRot = [
+        [1,      0,  0,     0],
+        [0, -sinRy,  0, cosRy],
+        [0,      0, -1,     0],
+        [0,  cosRy,  0, sinRy]];
+    // The final Lorentz transform is the product of the 3 above matrices.
+    this.rocketLorentz = 
+        matrixProduct(rocketRot, matrixProduct(boost, orbitRot));
   }
 
   getYaw(boost, dr, dphi) {
@@ -417,7 +446,7 @@ class Model {
     return Math.atan2(dphi0, dr0);
   }
 
-  updateCameraReferenceFrame() {
+  updateCameraAndRocketReferenceFrames() {
     const r = this.r;
     const cos_theta = Math.cos(this.worldTheta);
     const sin_theta = Math.sin(this.worldTheta);
@@ -439,6 +468,11 @@ class Model {
     this.eW = vectorMatrixProduct(L[1], e_static);
     this.eH = vectorMatrixProduct(L[2], e_static);
     this.eD = vectorMatrixProduct(L[3], e_static);
+
+    this.rocketTau = vectorMatrixProduct(this.rocketLorentz[0], e_static);
+    this.rocketW = vectorMatrixProduct(this.rocketLorentz[1], e_static);
+    this.rocketH = vectorMatrixProduct(this.rocketLorentz[2], e_static);
+    this.rocketD = vectorMatrixProduct(this.rocketLorentz[3], e_static);
 
     this.p = [r * ur[0], r * ur[1], r * ur[2]];
     this.kS = [L[0][0] / v, v * L[0][1], u * L[0][2], u / sin_theta * L[0][3]];
