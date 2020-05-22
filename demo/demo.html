@@ -471,6 +471,8 @@ class Model {
         new QuantizedValue(this, (x) => x, 500);
     this.highDefinition =
         new BooleanValue(this, false);
+    this.highContrast =
+        new BooleanValue(this, false);
     this.startRadius = 
         new QuantizedValue(this, (x) => Math.max(1 + 39 * x * x, 1.01), 940);
     this.startDirection = 
@@ -483,18 +485,20 @@ class Model {
         new BooleanValue(this, true);
     this.doppler =
         new BooleanValue(this, true);
-    this.rocket =
-        new BooleanValue(this, true);
     this.grid =
         new BooleanValue(this, false);
     this.blackHoleMass = 
-        new QuantizedValue(this, (x) => 10 * Math.pow(10, 6 * x), 330);
+        new QuantizedValue(this, (x) => 10 * Math.pow(10, 6 * x), 384);
     this.discDensity = 
         new QuantizedValue(this, (x) => 100 * Math.pow(x, 10), 500);
     this.discOpacity =
         new QuantizedValue(this, (x) => x, 300);
     this.discTemperature = 
-        new QuantizedValue(this, (x) => 1000 * Math.pow(10, x), 350);
+        new QuantizedValue(this, (x) => 1000 * Math.pow(10, x), 430);
+    this.rocketDistance =
+        new QuantizedValue(this, (x) => 30 + 50 * x, 500);
+    this.rocket =
+        new BooleanValue(this, false);
     this.starsYaw = 
         new QuantizedValue(this, (x) => 2 * Math.PI * (x - 0.5), 1800, 3600);
     this.starsPitch = 
@@ -541,6 +545,18 @@ class Model {
     this.eW = undefined;
     this.eH = undefined;
     this.eD = undefined;
+
+    // The orientation of the rocket (tangent to the orbit).
+    this.rocketYaw = 0;
+    // The Lorentz transformation matrix specifying the current rocket
+    // orientation and velocity.
+    this.rocketLorentz = undefined;
+    // The base vectors of the rocket reference frame, in (pseudo-)Cartesian
+    // coordinates.
+    this.rocketTau = undefined;
+    this.rocketW = undefined;
+    this.rocketH = undefined;
+    this.rocketD = undefined;
 
     this.blackHoleRadiusMeters = undefined;
     this.speedMetersPerSecond = undefined;
@@ -613,8 +629,8 @@ class Model {
   updateDerivedValues() {
     this.updateStarsMatrix();
     this.updateCameraCoordinates();
-    this.updateCameraLorentzTransform();
-    this.updateCameraReferenceFrame();
+    this.updateCameraAndRocketLorentzTransforms();
+    this.updateCameraAndRocketReferenceFrames();
     this.updateOrbitInfo();
   }
 
@@ -661,7 +677,7 @@ class Model {
     this.worldPhi = Math.atan2(sphi, cphi * ci);
   }
 
-  updateCameraLorentzTransform() {
+  updateCameraAndRocketLorentzTransforms() {
     // Compute the 4-velocity vector of the camera (in rotated Schwarzschild
     // coordinates such that its orbit is in the equatorial plane).
     const e = this.e;
@@ -719,7 +735,6 @@ class Model {
             (Target.FORWARD - this.cameraTarget.getValue()) * Math.PI / 2;
       }
     }
-
     // Compute the rotation matrix of the camera, in its local reference frame.
     const cosY = Math.cos(this.cameraYaw.getValue() + this.cameraYawOffset);
     const sinY = Math.sin(this.cameraYaw.getValue() + this.cameraYawOffset);
@@ -733,6 +748,24 @@ class Model {
 
     // The final Lorentz transform is the product of the 3 above matrices.
     this.lorentz = matrixProduct(cameraRot, matrixProduct(boost, orbitRot));
+
+    // Compute the direction of the rocket.
+    if (this.state == State.PLAYING) {
+      this.rocketYaw = this.getYaw(boost, k_s[1], k_s[3]);
+    } else {
+      this.rocketYaw = 0;
+    }
+    // Compute the rotation matrix of the rocket.
+    const cosRy = Math.cos(this.rocketYaw);
+    const sinRy = Math.sin(this.rocketYaw);
+    const rocketRot = [
+        [1,      0,  0,     0],
+        [0, -sinRy,  0, cosRy],
+        [0,      0, -1,     0],
+        [0,  cosRy,  0, sinRy]];
+    // The final Lorentz transform is the product of the 3 above matrices.
+    this.rocketLorentz = 
+        matrixProduct(rocketRot, matrixProduct(boost, orbitRot));
   }
 
   getYaw(boost, dr, dphi) {
@@ -742,7 +775,7 @@ class Model {
     return Math.atan2(dphi0, dr0);
   }
 
-  updateCameraReferenceFrame() {
+  updateCameraAndRocketReferenceFrames() {
     const r = this.r;
     const cos_theta = Math.cos(this.worldTheta);
     const sin_theta = Math.sin(this.worldTheta);
@@ -764,6 +797,11 @@ class Model {
     this.eW = vectorMatrixProduct(L[1], e_static);
     this.eH = vectorMatrixProduct(L[2], e_static);
     this.eD = vectorMatrixProduct(L[3], e_static);
+
+    this.rocketTau = vectorMatrixProduct(this.rocketLorentz[0], e_static);
+    this.rocketW = vectorMatrixProduct(this.rocketLorentz[1], e_static);
+    this.rocketH = vectorMatrixProduct(this.rocketLorentz[2], e_static);
+    this.rocketD = vectorMatrixProduct(this.rocketLorentz[3], e_static);
 
     this.p = [r * ur[0], r * ur[1], r * ur[2]];
     this.kS = [L[0][0] / v, v * L[0][1], u * L[0][2], u / sin_theta * L[0][3]];
@@ -846,18 +884,20 @@ class UrlParams {
     this.params.push(new IntParam('ce', model.exposure));
     this.params.push(new IntParam('cb', model.bloom));
     this.params.push(new BoolParam('hd', model.highDefinition));
+    this.params.push(new BoolParam('hc', model.highContrast));
     this.params.push(new IntParam('or', model.startRadius));
     this.params.push(new IntParam('od', model.startDirection));
     this.params.push(new IntParam('os', model.startSpeed));
     this.params.push(new IntParam('oi', model.orbitInclination));
     this.params.push(new BoolParam('pl', model.lensing));
     this.params.push(new BoolParam('pd', model.doppler));
-    this.params.push(new BoolParam('sr', model.rocket));
     this.params.push(new BoolParam('sg', model.grid));
     this.params.push(new IntParam('bhm', model.blackHoleMass));
     this.params.push(new IntParam('dd', model.discDensity));
     this.params.push(new IntParam('do', model.discOpacity));
     this.params.push(new IntParam('dt', model.discTemperature));
+    this.params.push(new IntParam('srd', model.rocketDistance));
+    this.params.push(new BoolParam('sr', model.rocket));
     this.params.push(new IntParam('sfy', model.starsYaw));
     this.params.push(new IntParam('sfp', model.starsPitch));
     this.params.push(new IntParam('sfr', model.starsRoll));
@@ -993,6 +1033,7 @@ const BLOOM_FILTERS = [
 // mipmap with a small kernel, and upsampling and adding the filtered images.
 
 const MAX_LEVELS = 9;
+const MAX_FLOAT16 = '6.55e4';
 
 const VERTEX_SHADER =
   `#version 300 es
@@ -1019,7 +1060,7 @@ const DOWNSAMPLE_SHADER =
         color += wi * wj * texture(source, source_uv + delta_uv).rgb;
       }
     }
-    frag_color = vec4(color, 1.0);
+    frag_color = vec4(min(color, ${MAX_FLOAT16}), 1.0);
   }`;
 
 const BLOOM_SHADER =
@@ -1036,7 +1077,7 @@ const BLOOM_SHADER =
       vec3 uvw = source_samples_uvw[i];
       color += uvw.z * texture(source, source_uv + uvw.xy).rgb;
     }
-    frag_color = vec4(color, 1.0);
+    frag_color = vec4(min(color, ${MAX_FLOAT16}), 1.0);
   }`;
 
 const UPSAMPLE_SHADER =
@@ -1061,7 +1102,7 @@ const UPSAMPLE_SHADER =
     vec3 c3 = texture(source, source_uv + source_delta_uv).rgb;
     vec4 weight = WEIGHTS[int(mod(ij.x, 2.0) + 2.0 * mod(ij.y, 2.0))];
     vec3 color = weight.x * c0 + weight.y * c1 + weight.z * c2 + weight.w * c3;
-    frag_color = vec4(color, 1.0);
+    frag_color = vec4(min(color, ${MAX_FLOAT16}), 1.0);
   }`;
 
 const RENDER_SHADER =
@@ -1074,7 +1115,25 @@ const RENDER_SHADER =
   uniform vec2 bloom_delta_uv;
   uniform float intensity;
   uniform float exposure;
+  uniform bool high_contrast;
   layout(location=0) out vec4 frag_color;
+
+  vec3 toneMap(vec3 color) {
+    return pow(vec3(1.0) - exp(-color), vec3(1.0 / 2.2));
+  }
+  
+  // ACES tone map, see
+  // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+  vec3 toneMapACES(vec3 color) {
+    const float A = 2.51;
+    const float B = 0.03;
+    const float C = 2.43;
+    const float D = 0.59;
+    const float E = 0.14;
+    color = (color * (A * color + B)) / (color * (C * color + D) + E);
+    return pow(color, vec3(1.0 / 2.2));
+  }
+
   void main() {
     vec2 source_uv = (gl_FragCoord.xy + vec2(1.0)) * source_delta_uv;
     vec3 color = texture(bloom, 0.5 * gl_FragCoord.xy * bloom_delta_uv).rgb;
@@ -1082,8 +1141,13 @@ const RENDER_SHADER =
       vec3 uvw = source_samples_uvw[i];
       color += uvw.z * texture(source, source_uv + uvw.xy).rgb;
     }
-    color = mix(texture(source, source_uv).rgb, color, intensity);
-    color = <TONE_MAPPING>;
+    color = mix(texture(source, source_uv).rgb, color, intensity) * exposure;
+    color = min(color, 10.0);
+    if (high_contrast) {
+      color = toneMapACES(color);
+    } else {
+      color = toneMap(color);
+    }
     frag_color = vec4(color, 1.0);
   }`;
 
@@ -1110,9 +1174,7 @@ const createTexture = function(gl, textureUnit, target) {
 // size changes.
 class Bloom {
 
-  // 'toneMappingExpression' must be a GLSL expression, which can depend on the
-  // 'color' and 'exposure' variables, e.g "vec3(1.0) - exp(-exposure * color)".
-  constructor(gl, width, height, toneMappingExpression) {
+  constructor(gl, width, height) {
     this.gl = gl;
     this.width = width;
     this.height = height;
@@ -1163,8 +1225,7 @@ class Bloom {
     gl.attachShader(this.renderProgram, vertexShader);
     gl.attachShader(this.renderProgram, 
         createShader(gl, gl.FRAGMENT_SHADER, 
-            RENDER_SHADER.replace(/SIZE/g, 25)
-                .replace('<TONE_MAPPING>', toneMappingExpression)));
+            RENDER_SHADER.replace(/SIZE/g, 25)));
     gl.linkProgram(this.renderProgram);
     gl.useProgram(this.renderProgram);
     gl.uniform1i(gl.getUniformLocation(this.renderProgram, 'source'), 0);
@@ -1173,6 +1234,8 @@ class Bloom {
         gl.getUniformLocation(this.renderProgram, 'intensity');
     this.renderProgram.exposureUniform = 
         gl.getUniformLocation(this.renderProgram, 'exposure');
+    this.renderProgram.highContrastUniform = 
+        gl.getUniformLocation(this.renderProgram, 'high_contrast');
     this.renderProgram.sourceDeltaUvUniform = 
         gl.getUniformLocation(this.renderProgram, 'source_delta_uv');
     this.renderProgram.bloomDeltaUvUniform = 
@@ -1196,10 +1259,10 @@ class Bloom {
         this.filterTextures.push(null);
       }
     }
-    this.resize(width, height);
 
     this.mipmapFbos = [];
     this.filterFbos = [];
+    this.depthBuffer = undefined;
     for (let i = 0; i < MAX_LEVELS; ++i) {
       const mipmapFbo = gl.createFramebuffer();
       this.mipmapFbos.push(mipmapFbo);
@@ -1213,10 +1276,18 @@ class Bloom {
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
             gl.TEXTURE_2D, this.filterTextures[i], 0);
       } else {
+        this.depthBuffer = gl.createRenderbuffer();
+        gl.bindRenderbuffer(gl.RENDERBUFFER, this.depthBuffer);
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16,
+            this.mipmapTextures[0].width, this.mipmapTextures[0].height);
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT,
+            gl.RENDERBUFFER, this.depthBuffer);
         this.filterFbos.push(null);
       }
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    this.resize(width, height);
   }
 
   resize(width, height) {
@@ -1241,6 +1312,10 @@ class Bloom {
            gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.FLOAT, null);
         this.filterTextures[level].width = w;
         this.filterTextures[level].height = h;
+      } else {
+        gl.bindRenderbuffer(gl.RENDERBUFFER, this.depthBuffer);
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16,
+            this.mipmapTextures[0].width, this.mipmapTextures[0].height);
       }
       level += 1;
       w = Math.ceil(w / 2);
@@ -1285,7 +1360,7 @@ class Bloom {
         this.mipmapTextures[0].height - 2);
   }
 
-  end(intensity, exposure) {
+  end(intensity, exposure, highContrast) {
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE0);
 
@@ -1364,6 +1439,7 @@ class Bloom {
     }
     gl.uniform1f(program.intensityUniform, intensity);
     gl.uniform1f(program.exposureUniform, exposure);
+    gl.uniform1i(program.highContrastUniform, highContrast ? 1 : 0);
     this.drawQuad(program);
   }
 
@@ -1383,6 +1459,499 @@ class Bloom {
   }
 }
 BlackHoleShaderDemoApp.Bloom = Bloom;
+})();
+
+(function() {
+
+const NEAR_PLANE = 0.1;
+const FAR_PLANE = 100;
+
+const ENV_MAP_LEVELS = 7;
+const ENV_MAP_SIZE = 1 << (ENV_MAP_LEVELS - 1);
+
+const EXHAUST_RADIUS = 0.514;
+const EXHAUST_Z_MIN = -20;
+const EXHAUST_Z_MAX = -2.1;
+
+const createShader = function(gl, type, source) {
+  const shader = gl.createShader(type);
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  return shader;
+};
+
+const loadRocketMesh = function(rocketDataUrl, callback) {
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', rocketDataUrl);
+  xhr.responseType = 'arraybuffer';
+  xhr.onload = (event) => {
+    const data = new DataView(xhr.response);
+    const numVertexFloats = data.getUint32(0, true);
+    const numIndices = data.getUint32(Uint32Array.BYTES_PER_ELEMENT, true);
+
+    let offset = 2 * Uint32Array.BYTES_PER_ELEMENT;
+    const vertices = new Float32Array(numVertexFloats);
+    for (let i = 0; i < numVertexFloats; ++i) {
+      vertices[i] =
+          data.getFloat32(i * Float32Array.BYTES_PER_ELEMENT + offset, true);
+    }
+ 
+    offset += numVertexFloats * Float32Array.BYTES_PER_ELEMENT;
+    const indices = new Uint32Array(numIndices);
+    for (let i = 0; i < numIndices; ++i) {
+      indices[i] =
+          data.getUint32(i * Uint32Array.BYTES_PER_ELEMENT + offset, true);
+    }
+    callback(vertices, indices);
+  };
+  xhr.send();
+};
+
+const loadRocketTexture = function(gl, textureUrl) {
+  const glExt = gl.getExtension('EXT_texture_filter_anisotropic');
+  const texture = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
+                   gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameterf(gl.TEXTURE_2D, glExt.TEXTURE_MAX_ANISOTROPY_EXT, 
+                   gl.getParameter(glExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT));
+  const image = new Image();
+  image.addEventListener('load', function() {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+    gl.generateMipmap(gl.TEXTURE_2D);
+  });
+  image.src = textureUrl;
+  return texture;
+}
+
+class RocketManager {
+  constructor(model, gl) {
+    this.model = model;
+    this.gl = gl;
+    this.rocketProgram = undefined;
+    this.exhaustProgram = undefined;
+    this.envMapTexture = undefined;
+    this.envMapFbo = undefined;
+    this.rocketVertexBuffer = undefined;
+    this.rocketIndexBuffer = undefined;
+    this.exhaustVertexBuffer = undefined;
+    this.exhaustIndexBuffer = undefined;
+    this.baseColorTexture = loadRocketTexture(gl, 'rocket_base_color.png');
+    this.occlusionRoughnessMetallicTexture =
+        loadRocketTexture(gl, 'rocket_occlusion_roughness_metallic.png');
+    this.normalMapTexture = loadRocketTexture(gl, 'rocket_normal.png');
+
+    this.createRocketProgram(gl);
+    this.createExhaustProgram(gl);
+    this.createEnvMap(gl);
+    loadRocketMesh('rocket.dat', 
+        (vertices, indices) => this.createRocketBuffers(vertices, indices));
+    this.createExhaustBuffers(gl);
+  }
+
+  createEnvMap(gl) {
+    this.envMapTexture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.envMapTexture);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.envMapTexture);
+    gl.texStorage2D(gl.TEXTURE_CUBE_MAP, ENV_MAP_LEVELS, gl.RGBA16F,
+        ENV_MAP_SIZE, ENV_MAP_SIZE);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER,
+                     gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    const glExt = gl.getExtension('EXT_texture_filter_anisotropic');
+    gl.texParameterf(gl.TEXTURE_CUBE_MAP, glExt.TEXTURE_MAX_ANISOTROPY_EXT, 
+                     gl.getParameter(glExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT));
+
+    this.envMapFbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.envMapFbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,   
+        gl.TEXTURE_CUBE_MAP_POSITIVE_X, this.envMapTexture, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+
+  createRocketProgram(gl) {
+    const vertexShader = createShader(
+        gl, 
+        gl.VERTEX_SHADER,
+        `#version 300 es
+        precision highp float;
+        ${document.querySelector("#rocket_vertex_shader").innerHTML}`);
+    const fragmentShader = createShader(
+        gl,
+        gl.FRAGMENT_SHADER,
+        `#version 300 es
+        precision highp float;
+        const float ENV_MAP_SIZE = float(${ENV_MAP_SIZE});
+        ${document.querySelector("#rocket_fragment_shader").innerHTML}`);
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);    
+
+    program.positionAttrib =
+        gl.getAttribLocation(program, 'position_attribute');
+    program.normalAttrib =
+        gl.getAttribLocation(program, 'normal_attribute');
+    program.tangentAttrib =
+        gl.getAttribLocation(program, 'tangent_attribute');
+    program.uvAttrib =
+        gl.getAttribLocation(program, 'uv_attribute');
+    program.ambientOcclusionAttrib =
+        gl.getAttribLocation(program, 'ambient_occlusion_attribute');
+    program.modelViewProjMatrix =
+        gl.getUniformLocation(program, 'model_view_proj_matrix');
+    program.camera = 
+        gl.getUniformLocation(program, 'camera');
+    program.baseColorTexture =
+        gl.getUniformLocation(program, 'base_color_texture');
+    program.occlusionRoughnessMetallicTexture =
+        gl.getUniformLocation(program, 'occlusion_roughness_metallic_texture');
+    program.normalMapTexture =
+        gl.getUniformLocation(program, 'normal_map_texture');
+    program.envMapTexture =
+        gl.getUniformLocation(program, 'env_map_texture');
+    this.rocketProgram = program;
+  }
+
+  createExhaustProgram(gl) {
+    const vertexShader = createShader(
+        gl, 
+        gl.VERTEX_SHADER,
+        `#version 300 es
+        precision highp float;
+        ${document.querySelector("#exhaust_vertex_shader").innerHTML}`);
+    const fragmentShader = createShader(
+        gl,
+        gl.FRAGMENT_SHADER,
+        `#version 300 es
+        precision highp float;
+        const float RADIUS = float(${EXHAUST_RADIUS});
+        const float Z_MIN = float(${EXHAUST_Z_MIN});
+        const float Z_MAX = float(${EXHAUST_Z_MAX});
+        ${document.querySelector("#exhaust_fragment_shader").innerHTML}`);
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);    
+
+    program.positionAttrib =
+        gl.getAttribLocation(program, 'position_attribute');
+    program.modelViewProjMatrix =
+        gl.getUniformLocation(program, 'model_view_proj_matrix');
+    program.camera = gl.getUniformLocation(program, 'camera');
+    program.intensity = gl.getUniformLocation(program, 'intensity');
+    program.kZ = gl.getUniformLocation(program, 'k_z');
+    program.kR = gl.getUniformLocation(program, 'k_r');
+    this.exhaustProgram = program;
+  }
+
+  createRocketBuffers(vertices, indices) {
+    const gl = this.gl;
+
+    this.rocketVertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.rocketVertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+    this.rocketIndexBuffer = gl.createBuffer();
+    this.rocketIndexBuffer.size = indices.length;
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.rocketIndexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);    
+  }
+
+  createExhaustBuffers(gl) {
+    const NUM_CIRCUMFERENCE_SAMPLES = 32;
+
+    const vertices = new Float32Array(6 * (NUM_CIRCUMFERENCE_SAMPLES + 1));
+    for (let i = 0; i <= NUM_CIRCUMFERENCE_SAMPLES; ++i) {
+      const r = i == 0 ? 0 : EXHAUST_RADIUS;
+      const alpha = (2 * Math.PI * i) / NUM_CIRCUMFERENCE_SAMPLES;
+      vertices[6 * i] = r * Math.cos(alpha); 
+      vertices[6 * i + 1] = r * Math.sin(alpha); 
+      vertices[6 * i + 2] = EXHAUST_Z_MIN;
+      vertices[6 * i + 3] = r * Math.cos(alpha); 
+      vertices[6 * i + 4] = r * Math.sin(alpha); 
+      vertices[6 * i + 5] = EXHAUST_Z_MAX;     
+    }
+
+    this.exhaustVertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.exhaustVertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+    const indices = new Uint32Array(12 * NUM_CIRCUMFERENCE_SAMPLES);
+    for (let i = 1; i <= NUM_CIRCUMFERENCE_SAMPLES; ++i) {
+      const j = (i % NUM_CIRCUMFERENCE_SAMPLES) + 1;
+      indices[12 * i - 12] = 0;
+      indices[12 * i - 11] = 2 * j;
+      indices[12 * i - 10] = 2 * i;
+      indices[12 * i - 9] = 2 * i;
+      indices[12 * i - 8] = 2 * j;
+      indices[12 * i - 7] = 2 * j + 1;
+      indices[12 * i - 6] = 2 * j + 1;
+      indices[12 * i - 5] = 2 * i + 1;
+      indices[12 * i - 4] = 2 * i;
+      indices[12 * i - 3] = 1;
+      indices[12 * i - 2] = 2 * i + 1;
+      indices[12 * i - 1] = 2 * j + 1;
+    }    
+    this.exhaustIndexBuffer = gl.createBuffer();
+    this.exhaustIndexBuffer.size = indices.length;
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.exhaustIndexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);    
+  }
+
+  renderEnvMap(program, quadVertexBuffer) {
+    const gl = this.gl;
+    const model = this.model;
+
+    const currentViewport = gl.getParameter(gl.VIEWPORT);
+    const currentFbo = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.envMapFbo);
+    gl.viewport(0, 0, ENV_MAP_SIZE, ENV_MAP_SIZE);
+
+    gl.useProgram(program);
+    gl.uniform3f(program.cameraSize, 
+        ENV_MAP_SIZE / 2, ENV_MAP_SIZE / 2, ENV_MAP_SIZE / 2);
+    gl.uniform3f(program.eTau,
+        model.rocketTau[1], model.rocketTau[2], model.rocketTau[3]);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, quadVertexBuffer);
+    gl.vertexAttribPointer(program.vertexAttrib, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(program.vertexAttrib);
+
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,   
+        gl.TEXTURE_CUBE_MAP_POSITIVE_X, this.envMapTexture, 0);
+    gl.uniform3f(program.eW,
+        -model.rocketD[1], -model.rocketD[2], -model.rocketD[3]);
+    gl.uniform3f(program.eH,
+        -model.rocketH[1], -model.rocketH[2], -model.rocketH[3]);
+    gl.uniform3f(program.eD,
+        -model.rocketW[1], -model.rocketW[2], -model.rocketW[3]);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,   
+        gl.TEXTURE_CUBE_MAP_NEGATIVE_X, this.envMapTexture, 0);
+    gl.uniform3f(program.eW,
+        model.rocketD[1], model.rocketD[2], model.rocketD[3]);
+    gl.uniform3f(program.eH,
+        -model.rocketH[1], -model.rocketH[2], -model.rocketH[3]);
+    gl.uniform3f(program.eD,
+        model.rocketW[1], model.rocketW[2], model.rocketW[3]);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,   
+        gl.TEXTURE_CUBE_MAP_POSITIVE_Y, this.envMapTexture, 0);
+    gl.uniform3f(program.eW,
+        model.rocketW[1], model.rocketW[2], model.rocketW[3]);
+    gl.uniform3f(program.eH,
+        model.rocketD[1], model.rocketD[2], model.rocketD[3]);
+    gl.uniform3f(program.eD,
+        -model.rocketH[1], -model.rocketH[2], -model.rocketH[3]);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,   
+        gl.TEXTURE_CUBE_MAP_NEGATIVE_Y, this.envMapTexture, 0);
+    gl.uniform3f(program.eW,
+        model.rocketW[1], model.rocketW[2], model.rocketW[3]);
+    gl.uniform3f(program.eH,
+        -model.rocketD[1], -model.rocketD[2], -model.rocketD[3]);
+    gl.uniform3f(program.eD,
+        model.rocketH[1], model.rocketH[2], model.rocketH[3]);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,   
+        gl.TEXTURE_CUBE_MAP_POSITIVE_Z, this.envMapTexture, 0);
+    gl.uniform3f(program.eW,
+        model.rocketW[1], model.rocketW[2], model.rocketW[3]);
+    gl.uniform3f(program.eH,
+        -model.rocketH[1], -model.rocketH[2], -model.rocketH[3]);
+    gl.uniform3f(program.eD,
+        -model.rocketD[1], -model.rocketD[2], -model.rocketD[3]);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,   
+        gl.TEXTURE_CUBE_MAP_NEGATIVE_Z, this.envMapTexture, 0);
+    gl.uniform3f(program.eW,
+        -model.rocketW[1], -model.rocketW[2], -model.rocketW[3]);
+    gl.uniform3f(program.eH,
+        -model.rocketH[1], -model.rocketH[2], -model.rocketH[3]);
+    gl.uniform3f(program.eD,
+        model.rocketD[1], model.rocketD[2], model.rocketD[3]);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    gl.disableVertexAttribArray(program.vertexAttrib);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, currentFbo);
+    gl.viewport(currentViewport[0], currentViewport[1], currentViewport[2],
+        currentViewport[3]);
+  }
+
+  drawRocket() {
+    if (!this.rocketVertexBuffer) return;
+
+    const gl = this.gl;
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.baseColorTexture);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.occlusionRoughnessMetallicTexture);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this.normalMapTexture);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.envMapTexture);
+    gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+
+    const program = this.rocketProgram;
+    gl.useProgram(program);
+    gl.uniform1i(program.baseColorTexture, 0);
+    gl.uniform1i(program.occlusionRoughnessMetallicTexture, 1);
+    gl.uniform1i(program.normalMapTexture, 2);
+    gl.uniform1i(program.envMapTexture, 3);
+    this.setCameraUniforms(program);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.rocketVertexBuffer);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.rocketIndexBuffer);
+    const stride = (3 + 3 + 4 + 1 + 2) * 4;
+    gl.vertexAttribPointer(
+        program.positionAttrib, 3, gl.FLOAT, false, stride, 0);
+    gl.vertexAttribPointer(
+        program.normalAttrib, 3, gl.FLOAT, false, stride, 3 * 4);
+    gl.vertexAttribPointer(
+        program.tangentAttrib, 4, gl.FLOAT, false, stride, 6 * 4);
+    gl.vertexAttribPointer(
+        program.uvAttrib, 2, gl.FLOAT, false, stride, 10 * 4);
+    gl.vertexAttribPointer(
+        program.ambientOcclusionAttrib, 1, gl.FLOAT, false, stride, 12 * 4);
+    gl.enableVertexAttribArray(program.positionAttrib);
+    gl.enableVertexAttribArray(program.normalAttrib);
+    gl.enableVertexAttribArray(program.tangentAttrib);
+    gl.enableVertexAttribArray(program.uvAttrib);
+    gl.enableVertexAttribArray(program.ambientOcclusionAttrib);
+
+    gl.drawElements(
+        gl.TRIANGLES, this.rocketIndexBuffer.size, gl.UNSIGNED_INT, 0);
+
+    gl.disableVertexAttribArray(program.positionAttrib);
+    gl.disableVertexAttribArray(program.normalAttrib);
+    gl.disableVertexAttribArray(program.tangentAttrib);
+    gl.disableVertexAttribArray(program.uvAttrib);
+    gl.disableVertexAttribArray(program.ambientOcclusionAttrib);
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.CULL_FACE);
+  }
+
+  drawExhaust(time, gForce) {
+    if (!this.rocketVertexBuffer) return;
+
+    const gl = this.gl;
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendEquation(gl.FUNC_ADD);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    gl.enable(gl.CULL_FACE);
+
+    const program = this.exhaustProgram;
+    gl.useProgram(program);
+
+    const intensity = 0.1 * Math.pow(gForce, 0.75);
+    gl.uniform3f(program.intensity, 
+        46 / 255 * intensity, 176 / 255 * intensity, intensity);
+
+    time *= 100;
+    const kR1 = 6.75 + 0.5 * Math.cos(time);
+    const kR2 = 5.75 + 0.5 * Math.cos((time + 1) / Math.sqrt(2));
+    const kR3 = 4.75 + 0.5 * Math.cos((time + 2) / Math.sqrt(3));
+    const R2 = EXHAUST_RADIUS * EXHAUST_RADIUS;
+    gl.uniform3f(program.kR, kR1 / R2, kR2 / R2, kR3 / R2);
+
+    const kZ1 = 27 + 2 * Math.cos((time + 1) / Math.sqrt(2));
+    const kZ2 = 23 + 2 * Math.cos((time + 2) / Math.sqrt(3));
+    const kZ3 = 19 + 2 * Math.cos(time);
+    const DZ = EXHAUST_Z_MAX - EXHAUST_Z_MIN;
+    gl.uniform3f(program.kZ, kZ1 / DZ, kZ2 / DZ, kZ3 / DZ);
+    this.setCameraUniforms(program);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.exhaustVertexBuffer);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.exhaustIndexBuffer);
+    gl.vertexAttribPointer(
+        program.positionAttrib, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(program.positionAttrib);
+
+    gl.cullFace(gl.BACK);
+    gl.drawElements(
+        gl.TRIANGLES, this.exhaustIndexBuffer.size, gl.UNSIGNED_INT, 0);
+
+    gl.cullFace(gl.FRONT);
+    gl.drawElements(
+        gl.TRIANGLES, this.exhaustIndexBuffer.size, gl.UNSIGNED_INT, 0);
+
+    gl.disableVertexAttribArray(program.positionAttrib);
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
+    gl.disable(gl.CULL_FACE);
+    gl.cullFace(gl.BACK);
+  }
+
+  setCameraUniforms(program) {
+    const yaw = this.model.cameraYaw.getValue() + this.model.cameraYawOffset -
+        this.model.rocketYaw;
+    const cameraDist = this.model.rocketDistance.getValue() / 2;
+    const offsetDist = 0.4 * cameraDist;
+    const tx = -offsetDist * Math.sin(this.model.rocketYaw);
+    const tz = offsetDist * Math.cos(this.model.rocketYaw);
+    const cy = Math.cos(yaw);
+    const sy = Math.sin(yaw);
+    const cp = Math.cos(this.model.cameraPitch.getValue());
+    const sp = Math.sin(this.model.cameraPitch.getValue());
+    const modelViewMatrix = [
+      [      cy,  0,      -sy,                    cy * tx      - sy * tz],
+      [-sy * sp, cp, -cy * sp,             - sy * sp * tx - cy * sp * tz],
+      [ sy * cp, sp,  cy * cp, -cameraDist + sy * cp * tx + cy * cp * tz],
+      [       0,  0,        0,                                         1]
+    ];
+
+    const f = 1 / Math.tan(this.model.fovY / 2);
+    const a = document.body.clientWidth / document.body.clientHeight;
+    const b = -(FAR_PLANE + NEAR_PLANE) / (FAR_PLANE - NEAR_PLANE);
+    const c = -2 * FAR_PLANE * NEAR_PLANE / (FAR_PLANE - NEAR_PLANE);
+    const projMatrix = [
+      [f / a, 0,  0, 0],
+      [    0, f,  0, 0],
+      [    0, 0,  b, c],
+      [    0, 0, -1, 0]
+    ];
+
+    const modelViewProjMatrix = 
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    for (let i = 0; i < 4; ++i) {
+      for (let j = 0; j < 4; ++j) {
+        for (let k = 0; k < 4; ++k) {
+          modelViewProjMatrix[i + 4 * j] +=
+              projMatrix[i][k] * modelViewMatrix[k][j];
+        }
+      }
+    }
+    this.gl.uniformMatrix4fv(program.modelViewProjMatrix, false,
+        modelViewProjMatrix);
+
+    const camera = [0, 0, 0, 1];
+    for (let i = 0; i < 3; ++i) {
+      for (let j = 0; j < 3; ++j) {
+        camera[i] -= modelViewMatrix[j][i] * modelViewMatrix[j][3];
+      }
+    }
+    this.gl.uniform3f(program.camera, camera[0], camera[1], camera[2]);
+  }
+}
+
+BlackHoleShaderDemoApp.RocketManager = RocketManager;
 })();
 
 (function() {
@@ -1446,6 +2015,28 @@ const loadIntTextureData = function(textureDataUrl, callback) {
   xhr.send();
 };
 
+const loadNoiseTexture = function(gl, glExt, textureUrl) {
+  const texture = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
+                   gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameterf(gl.TEXTURE_2D, glExt.TEXTURE_MAX_ANISOTROPY_EXT, 
+                   gl.getParameter(glExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT));
+  const image = new Image();
+  image.addEventListener('load', function() {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, gl.RED, gl.UNSIGNED_BYTE, image);
+    gl.generateMipmap(gl.TEXTURE_2D);
+  });
+  image.src = textureUrl;
+  return texture;
+}
+
+
 class TextureManager {
   constructor(rootElement, gl) {
     this.loadingPanel = rootElement.querySelector('#cv_loading_panel');
@@ -1469,6 +2060,7 @@ class TextureManager {
     const ext = gl.getExtension('EXT_texture_filter_anisotropic');
     this.loadTextures(ext);
     this.loadStarTextures(ext);
+    this.noiseTexture = loadNoiseTexture(gl, ext, 'noise_texture.png');
 
     document.body.addEventListener('keypress', (e) => this.onKeyPress(e)); 
   }
@@ -1695,7 +2287,7 @@ const generateDiscParticleParams = function() {
 
   let ringParams = '';
   let numRings = 0;
-  for (let r1 = rMin; r1 < rMax; r1 += 0.2) {
+  for (let r1 = rMin; r1 < rMax; r1 += 0.75) {
     const e = 0.1 * Math.random();
     const r2 = r1 * (1.0 + e) / (1.0 - e);
     const u1 = 1 / r2;
@@ -1829,6 +2421,8 @@ class ShaderManager {
         gl.getUniformLocation(program, 'black_body_texture');
     program.dopplerTexture =
         gl.getUniformLocation(program, 'doppler_texture');
+    program.noiseTexture = 
+        gl.getUniformLocation(program, 'noise_texture');
     program.discParams =
         gl.getUniformLocation(program, 'disc_params');
 
@@ -1841,7 +2435,7 @@ class ShaderManager {
 BlackHoleShaderDemoApp.ShaderManager = ShaderManager;
 })();
 
-(function(model, Bloom, TextureManager, ShaderManager) {
+(function(model, Bloom, TextureManager, ShaderManager, RocketManager) {
 
 const createQuadVertexBuffer = function(gl) {
   const vertexBuffer = gl.createBuffer();
@@ -1872,8 +2466,8 @@ class CameraView {
     this.vertexBuffer = createQuadVertexBuffer(this.gl);
     this.textureManager = new TextureManager(rootElement, this.gl);
     this.shaderManager = new ShaderManager(model, this.textureManager, this.gl);
-    this.bloom = new Bloom(this.gl, this.canvas.width, this.canvas.height,
-        'pow(vec3(1.0) - exp(-exposure * color), vec3(1.0 / 2.2))');
+    this.rocketManager = new RocketManager(model, this.gl);
+    this.bloom = new Bloom(this.gl, this.canvas.width, this.canvas.height);
 
     this.lastTauSeconds = Date.now() / 1000.0;
     this.lastFrameTime = undefined;
@@ -1928,6 +2522,10 @@ class CameraView {
       this.onResize();      
     }
 
+    const tauSeconds = Date.now() / 1000.0;
+    const dTauSeconds = tauSeconds - this.lastTauSeconds;
+    this.lastTauSeconds = tauSeconds;
+
     const tanFovY = Math.tan(this.model.fovY / 2);
     const focalLength = this.canvas.height / (2 * tanFovY);
 
@@ -1944,7 +2542,8 @@ class CameraView {
     } else {
       gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureManager.galaxyTexture);
     }
-    const minLod = this.textureManager.getMinLoadedStarTextureLod();
+    const minLod = this.model.grid.getValue() ?
+        0 : this.textureManager.getMinLoadedStarTextureLod();
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_LOD, minLod);
 
     gl.activeTexture(gl.TEXTURE3);
@@ -1958,6 +2557,9 @@ class CameraView {
 
     gl.activeTexture(gl.TEXTURE6);
     gl.bindTexture(gl.TEXTURE_3D, this.textureManager.dopplerTexture);
+
+    gl.activeTexture(gl.TEXTURE7);
+    gl.bindTexture(gl.TEXTURE_2D, this.textureManager.noiseTexture);
 
     gl.useProgram(program);
     gl.uniform3f(program.cameraSize, 
@@ -1985,6 +2587,7 @@ class CameraView {
     gl.uniform1f(program.minStarsLod, minLod);
     gl.uniform1i(program.blackBodyTexture, 5);
     gl.uniform1i(program.dopplerTexture, 6);
+    gl.uniform1i(program.noiseTexture, 7);
     gl.uniform3f(program.discParams, 
         this.model.discDensity.getValue(),
         this.model.discOpacity.getValue(), 
@@ -1993,15 +2596,22 @@ class CameraView {
     this.bloom.begin();
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-    gl.vertexAttribPointer(program.vertexAttrib, 2, this.gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(program.vertexAttrib, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(program.vertexAttrib);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.disableVertexAttribArray(program.vertexAttrib);
 
-    this.bloom.end(this.model.bloom.getValue(), this.model.exposure.getValue());
+    if (this.model.rocket.getValue()) {
+      this.rocketManager.renderEnvMap(program, this.vertexBuffer);
+      this.rocketManager.drawRocket();
+      if (this.model.gForce > 0) {
+        this.rocketManager.drawExhaust(tauSeconds, this.model.gForce);
+      }
+    }
 
-    const tauSeconds = Date.now() / 1000.0;
-    const dTauSeconds = tauSeconds - this.lastTauSeconds;
-    this.lastTauSeconds = tauSeconds;
+    this.bloom.end(this.model.bloom.getValue(), this.model.exposure.getValue(),
+        this.model.highContrast.getValue());
+
     this.model.updateOrbit(dTauSeconds);
 
     requestAnimationFrame(() => this.onRender());
@@ -2079,7 +2689,8 @@ window.addEventListener('DOMContentLoaded', () => {
 })(BlackHoleShaderDemoApp.model,
     BlackHoleShaderDemoApp.Bloom,
     BlackHoleShaderDemoApp.TextureManager,
-    BlackHoleShaderDemoApp.ShaderManager);
+    BlackHoleShaderDemoApp.ShaderManager,
+    BlackHoleShaderDemoApp.RocketManager);
 
 (function(model) {
 
@@ -2546,6 +3157,8 @@ class SettingsPanel {
         new Slider(rootElement, 'bloom', model.bloom);
     this.highDefinition =
         new Checkbox(rootElement, 'high_definition', model.highDefinition);
+    this.highContrast =
+        new Checkbox(rootElement, 'high_contrast', model.highContrast);
     this.startRadius = 
         new Slider(rootElement, 'start_radius', model.startRadius);
     this.startDirection = 
@@ -2558,7 +3171,6 @@ class SettingsPanel {
         new Checkbox(rootElement, 'lensing', model.lensing);
     this.doppler = 
         new Checkbox(rootElement, 'doppler', model.doppler);
-    /* TODO: add the 'rocket' setting. */
     this.grid = 
         new Checkbox(rootElement, 'grid', model.grid);
     this.blackHoleMass = 
@@ -2569,6 +3181,10 @@ class SettingsPanel {
         new Slider(rootElement, 'disc_opacity', model.discOpacity);
     this.discTemperature =
         new Slider(rootElement, 'disc_temperature', model.discTemperature);
+    this.rocketDistance =
+        new Slider(rootElement, 'rocket_distance', model.rocketDistance);
+    this.rocket = 
+        new Checkbox(rootElement, 'rocket', model.rocket);
     this.starsYaw =
         new Slider(rootElement, 'stars_yaw', model.starsYaw);
     this.starsPitch =
@@ -2612,6 +3228,7 @@ class SettingsPanel {
     this.exposure.update((v) => `${(Math.log2(v * 1000)).toPrecision(3)}`);
     this.bloom.update((v) => `${(v * 100).toFixed(0)}%`);
     this.highDefinition.update();
+    this.highContrast.update();
     this.startRadius.update((v) => `${v.toPrecision(3)}`);
     this.startDirection.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);
     this.startSpeed.update((v) => `${v.toPrecision(3)}`);
@@ -2623,6 +3240,8 @@ class SettingsPanel {
     this.discDensity.update((v) => `${v.toExponential(2)}`);
     this.discOpacity.update((v) => `${(v * 100).toFixed(1)}%`);
     this.discTemperature.update((v) => `${v.toFixed(0)}K`);
+    this.rocketDistance.update((v) => `${v.toFixed(1)}m`);
+    this.rocket.update();
     this.starsYaw.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);
     this.starsPitch.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);
     this.starsRoll.update((v) => `${(v * 180 / Math.PI).toFixed(1)}°`);
@@ -2723,6 +3342,275 @@ window.addEventListener('DOMContentLoaded', () => {
     </script>
   </head>
   <body>
+    <script type="x-shader/x-vertex" id="exhaust_vertex_shader">
+
+uniform mat4 model_view_proj_matrix;
+
+layout(location = 0) in vec3 position_attribute;
+
+out vec3 position;
+
+void main() {
+  position = position_attribute;
+  gl_Position = model_view_proj_matrix * vec4(position, 1.0);
+}
+    </script>
+    <script type="x-shader/x-fragment" id="exhaust_fragment_shader">
+
+uniform vec3 camera;
+
+uniform vec3 intensity;
+uniform vec3 k_r;
+uniform vec3 k_z;
+
+in vec3 position;
+
+layout(location = 0) out vec4 frag_color;
+
+void main() {
+  frag_color = vec4(0.0);
+
+  vec3 dir = normalize(position - camera);
+  float a = dot(dir.xy, dir.xy);
+  float b = dot(camera.xy, dir.xy);
+  float c = dot(camera.xy, camera.xy);
+  float discriminant = b * b - a * (c - RADIUS * RADIUS);
+  if (discriminant >= 0.0) {
+    float t_min = max((-b - sqrt(discriminant)) / a, 0.0);
+    float t_max = (-b + sqrt(discriminant)) / a;
+    if (dir.z > 0.0) {
+      t_min = max(t_min, (Z_MIN - camera.z) / dir.z);
+      t_max = min(t_max, (Z_MAX - camera.z) / dir.z);
+    } else {
+      t_min = max(t_min, (Z_MAX - camera.z) / dir.z);
+      t_max = min(t_max, (Z_MIN - camera.z) / dir.z);
+    }
+    if (t_min < t_max) {
+      const int N = 16;
+      vec3 emitted = vec3(0.0);
+      float dt = (t_max - t_min) / float(N);
+      float t = t_min + 0.5 * dt;
+      // TODO(me): use analytic indefinite integral instead?
+      for (int i = 0; i < N; ++i) {
+        float r2 = ((a * t + 2.0 * b) * t) + c;
+        float z = camera.z + t * dir.z;
+        emitted += exp(- k_r * r2 - k_z * (Z_MAX - z));
+        t += dt;
+      }
+      frag_color = vec4(intensity * emitted * dt, 0.0);
+    }
+  }
+}
+    </script>
+    <script type="x-shader/x-vertex" id="rocket_vertex_shader">
+
+uniform mat4 model_view_proj_matrix;
+
+layout(location = 0) in vec3 position_attribute;
+layout(location = 1) in vec3 normal_attribute;
+layout(location = 2) in vec4 tangent_attribute;
+layout(location = 3) in vec2 uv_attribute;
+layout(location = 4) in float ambient_occlusion_attribute;
+
+out vec3 position;
+out vec3 normal;
+out vec3 tangent;
+out vec2 uv;
+out float ambient_occlusion;
+
+void main() {
+  position = position_attribute;
+  normal = normal_attribute;
+  tangent = tangent_attribute.xyz;
+  uv = uv_attribute;
+  ambient_occlusion = ambient_occlusion_attribute;
+  gl_Position = model_view_proj_matrix * vec4(position, 1.0);
+}
+    </script>
+    <script type="x-shader/x-fragment" id="rocket_fragment_shader">
+
+const float PI = 3.141592653589793;
+
+// First few terms of the Van Der Corput sequence.
+const float VAN_DER_CORPUT[32] = float[32](
+  0.00000, 0.50000, 0.25000, 0.75000, 0.12500, 0.62500, 0.37500, 0.87500,
+  0.06250, 0.56250, 0.31250, 0.81250, 0.18750, 0.68750, 0.43750, 0.93750,
+  0.03125, 0.53125, 0.28125, 0.78125, 0.15625, 0.65625, 0.40625, 0.90625,
+  0.09375, 0.59375, 0.34375, 0.84375, 0.21875, 0.71875, 0.46875, 0.96875
+);
+
+uniform vec3 camera;
+uniform sampler2D base_color_texture;
+uniform sampler2D occlusion_roughness_metallic_texture;
+uniform sampler2D normal_map_texture;
+uniform samplerCube env_map_texture;
+
+in vec3 position;           // position, in object space.
+in vec3 normal;             // geometric normal, in object space.
+in vec3 tangent;            // geometric tangent, in object space.
+in vec2 uv;
+in float ambient_occlusion; // 0 = full occlusion, 1 = no occlusion.
+
+layout(location = 0) out vec4 frag_color;
+
+// The following uses the notations and equations in Appendix B of
+// https://github.com/KhronosGroup/glTF/tree/master/specification/2.0
+
+struct Surface {
+  vec3 n;              // perturbed normal, in object space.
+  vec3 tx;             // perturbed tangent, in object space.
+  vec3 ty;             // perturbed bitangent, in object space.
+  float occlusion;     // 0 = full occlusion, 1 = no occlusion.
+  float alpha_sq;      // fourth power of 'roughness'.
+  vec3 albedo;         // surface diffuse albedo.
+  vec3 f0;             // surface reflection ratio.
+};
+
+// Returns the perturbed normal in object space.
+vec3 ComputeNormal() {
+  // Perturbed normal, in geometric tangent space.
+  vec3 n = texture(normal_map_texture, uv).xyz * 2.0 - vec3(1.0);
+  // Basis vectors of the geometric tangent space, in object space.
+  vec3 ez = normalize(normal);
+  vec3 ex = normalize(tangent);
+  vec3 ey = cross(ez, ex);
+  return normalize(n.x * ex + n.y * ey + n.z * ez);
+}
+
+// Returns the parameters of the surface.
+Surface ComputeSurface() {
+  Surface surface;
+  surface.n = ComputeNormal();
+  surface.ty = normalize(cross(surface.n, tangent));
+  surface.tx = cross(surface.ty, surface.n);
+
+  vec3 occlusion_roughness_metallic =
+      texture(occlusion_roughness_metallic_texture, uv).rgb;
+  surface.occlusion = occlusion_roughness_metallic.r * ambient_occlusion;
+  float roughness = occlusion_roughness_metallic.g;
+  float metallic = occlusion_roughness_metallic.b;
+  float alpha = roughness * roughness;
+  surface.alpha_sq = alpha * alpha;
+
+  const float DIELECTRIC_F0 = 0.04;
+  const vec3 METAL_ALBEDO = vec3(0.0);
+  vec3 color = texture(base_color_texture, uv).rgb;
+  surface.albedo = mix(color * (1.0 - DIELECTRIC_F0), METAL_ALBEDO, metallic);
+  surface.f0 = mix(vec3(DIELECTRIC_F0), color, metallic);
+  
+  return surface;
+}
+
+// Returns the object space coordinates of a vector specified by its spherical
+// coordinates in the perturbed tangent space of the surface.
+vec3 GetVector(Surface surface, float cos_theta, float sin_theta, float phi) {
+  float vx = sin_theta * cos(phi);
+  float vy = sin_theta * sin(phi);
+  float vz = cos_theta;
+  return vx * surface.tx + vy * surface.ty + vz * surface.n;
+}
+
+// Surface reflection ratio F.
+vec3 Fresnel(vec3 f0, float v_dot_h) {
+  return f0 + (vec3(1.0) - f0) * pow(1.0 - v_dot_h, 5.0);
+}
+
+// Geometric occlusion term G divided by 4 (n.l) (n.v).
+float MicroFacetVisibility(float alpha_sq, float n_dot_l, float n_dot_v) {
+  float a = n_dot_l * sqrt(n_dot_v * n_dot_v * (1.0 - alpha_sq) + alpha_sq);
+  float b = n_dot_v * sqrt(n_dot_l * n_dot_l * (1.0 - alpha_sq) + alpha_sq);
+  return 0.5 / (a + b);
+}
+
+// Microfacet distribution D.
+float MicroFacetDistribution(float alpha_sq, float n_dot_h) {
+  float a = n_dot_h * n_dot_h * (alpha_sq - 1.0) + 1.0;
+  return alpha_sq / (PI * a * a);
+}
+
+vec3 ImageBasedLighting(Surface surface, vec3 v) {
+  // Compute the lighting integral with N_Z * N_PHI samples of the light 
+  // direction l, all having the same solid angle OMEGA_SAMPLE. This is used for
+  // the diffuse component, and for the specular component when the roughness is
+  // "large".
+  const int N_Z = 3;
+  const int N_PHI = 8;
+  const float OMEGA_SAMPLE = 2.0 * PI / float(N_Z * N_PHI);
+  const float OMEGA_TEXEL = 4.0 * PI / (6.0 * ENV_MAP_SIZE * ENV_MAP_SIZE);
+  const float LOD = 0.5 * log2(OMEGA_SAMPLE / OMEGA_TEXEL);
+  float n_dot_v = clamp(dot(surface.n, v), 0.0, 1.0);
+  vec3 diffuse = vec3(0.0);
+  vec3 specular = vec3(0.0);
+  for (int i = 0; i < N_Z; ++i) {
+    float cos_theta = (float(i) + 0.5) / float(N_Z);
+    float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+    for (int j = 0; j < N_PHI; ++j) {
+      float phi = float(j) * (2.0 * PI / float(N_PHI));
+      vec3 l = GetVector(surface, cos_theta, sin_theta, phi);
+      vec3 L = textureLod(env_map_texture, l, LOD).rgb;
+
+      vec3 h = normalize(v + l);
+      float n_dot_l = cos_theta;
+      float n_dot_h = clamp(dot(surface.n, h), 0.0, 1.0);
+      float v_dot_h = clamp(dot(v, h), 0.0, 1.0);
+      vec3 F = Fresnel(surface.f0, v_dot_h);
+      float V = MicroFacetVisibility(surface.alpha_sq, n_dot_l, n_dot_v);
+      float D = MicroFacetDistribution(surface.alpha_sq, n_dot_h);
+
+      // Note: the 1/pi factor is moved outside the loop, at the end.
+      diffuse += surface.albedo * L * (vec3(1.0) - F) * n_dot_l;
+      specular += L * F * (V * D * n_dot_l);
+    }
+  }
+  diffuse *= OMEGA_SAMPLE / PI;
+  specular *= OMEGA_SAMPLE;
+
+  // Compute the specular component with importance sampling, when the roughness
+  // is "small". References:
+  // - https://blog.selfshadow.com/publications/s2013-shading-course/karis/
+  //     s2013_pbs_epic_notes_v2.pdf
+  // - https://placeholderart.wordpress.com/2015/07/28/implementation-notes-
+  //     runtime-environment-map-filtering-for-image-based-lighting/
+  // - https://github.com/KhronosGroup/glTF-IBL-Sampler/blob/master/lib/
+  //     shaders/filter.frag
+  const int SAMPLE_COUNT = 24;
+  vec3 importance_specular = vec3(0.0);
+  for (int i = 0; i < SAMPLE_COUNT; ++i) {
+    float vdc = VAN_DER_CORPUT[i];
+    float z_sq = (1.0 - vdc) / ((surface.alpha_sq - 1.0) * vdc + 1.0);
+    float cos_theta = sqrt(z_sq);
+    float sin_theta = sqrt(1.0 - z_sq);
+    float phi = float(i) * (2.0 * PI / float(SAMPLE_COUNT));
+    vec3 h = GetVector(surface, cos_theta, sin_theta, phi);
+
+    vec3 l = reflect(-v, h);
+    float n_dot_l = dot(surface.n, l);
+    if (n_dot_l <= 0.0) continue;
+
+    float n_dot_h = clamp(dot(surface.n, h), 0.0, 1.0);
+    float v_dot_h = clamp(dot(v, h), 0.0, 1.0);
+    vec3 F = Fresnel(surface.f0, v_dot_h);
+    float V = MicroFacetVisibility(surface.alpha_sq, n_dot_l, n_dot_v);
+    float D = MicroFacetDistribution(surface.alpha_sq, n_dot_h);
+
+    float pdf = D * n_dot_h / (4.0 * v_dot_h);
+    float omega_sample_inverse = pdf * float(SAMPLE_COUNT);
+    float lod = -0.5 * log2(omega_sample_inverse * OMEGA_TEXEL);
+    vec3 L = textureLod(env_map_texture, l, lod).rgb;
+
+    importance_specular += L * F * (V * D * n_dot_l / pdf);
+  }
+  importance_specular *= (1.0 / float(SAMPLE_COUNT));
+
+  return diffuse + (surface.alpha_sq < 0.0625 ? importance_specular : specular);
+}
+
+void main() {
+  Surface surface = ComputeSurface();
+  vec3 v = normalize(camera - position);
+  frag_color = vec4(ImageBasedLighting(surface, v) * surface.occlusion, 1.0);
+}
+    </script>
     <script type="x-shader/x-vertex" id="vertex_shader">
 
 uniform vec3 camera_size;
@@ -2759,6 +3647,7 @@ uniform float min_stars_lod;
 
 uniform sampler2D black_body_texture;
 uniform highp sampler3D doppler_texture;
+uniform sampler2D noise_texture;
 uniform vec3 disc_params;
 
 in vec3 view_dir;
@@ -2864,6 +3753,10 @@ vec4 GridDiscColor(vec2 p, float t, bool top_side, float doppler_factor,
   vec3 color = BlackBodyColor(black_body_texture, temperature * doppler_factor);
   color *= 0.2 + 0.8 * value_phi * value_r;
   return vec4(top_side ? color : color * 0.01, 1.0);
+}
+
+float Noise(vec2 uv) {
+  return 3.0 * (texture(noise_texture, uv).r - 0.5) + 1.0;
 }
 
 vec4 DiscColor(vec2 p, float t, bool top_side, float doppler_factor) {
@@ -3100,6 +3993,9 @@ vec3 StarTextureColor(vec3 dir, float lod, out vec2 sub_position);
 // - color of the stars in the footprint of the pixel in direction 'dir', times
 //   the given gravitational lensing amplification factor.
 vec3 StarColor(vec3 dir, float lensing_amplification_factor);
+// - noise function used in the default accretion disc shading function 
+//   'DefaultDiscColor()'.
+float Noise(vec2 uv);
 // - color and opacity of the accretion disc at 'p', and at time 't', for the
 //   top or bottom side of the disc, and with the given Doppler factor.
 vec4 DiscColor(vec2 p, float t, bool top_side, float doppler_factor);
@@ -3209,7 +4105,7 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
   float p_r = length(p);
   float p_phi = atan(p.y, p.x);
 
-  float density = 2.0;
+  float density = 0.0;
   for (int i = 0; i < NUM_DISC_PARTICLES; ++i) {
     vec4 params = DISC_PARTICLE_PARAMS[i];
     float u1 = params.x;
@@ -3222,8 +4118,9 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
     float a = mod(p_phi - phi, 2.0 * pi);
     float s = sin(dtheta_dphi * (a + phi));
     float r = 1.0 / (u1 + (u2 - u1) * s * s);
-    vec2 d = vec2((a - pi) / pi, r - p_r);
-    density += smoothstep(1.0, 0.0, length(d));
+    vec2 d = vec2(a - pi, r - p_r) * vec2(1.0 / pi, 0.5);
+    float noise = Noise(d * vec2(p_r / OUTER_DISC_R, 1.0));
+    density += smoothstep(1.0, 0.0, length(d)) * noise;
   }
 
   const float r_max = 49.0 / 12.0;
@@ -3234,10 +4131,10 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
   float temperature =
       disc_temperature * temperature_profile * (1.0 / temperature_profile_max);
 
-  vec3 color = density *
-               BlackBodyColor(black_body_texture, temperature * doppler_factor);
+  vec3 color = max(density, 0.0) *
+      BlackBodyColor(black_body_texture, temperature * doppler_factor);
   float alpha = smoothstep(INNER_DISC_R, INNER_DISC_R * 1.2, p_r) *
-                smoothstep(OUTER_DISC_R, OUTER_DISC_R / 1.2, p_r);
+      smoothstep(OUTER_DISC_R, OUTER_DISC_R / 1.2, p_r);
   return vec4(color * alpha, alpha);
 }
 
@@ -3446,6 +4343,18 @@ Shortcut keys: '+' / '-' to increase / decrease exposure.">
           <span id="sp_bloom_value" class="sp-value"></span>
         </div>
 
+        <div class="sp-setting" 
+             title="Enables a higher image resolution (decreases performance)"
+             id="sp_high_definition_div">
+          <label for="sp_high_definition">High Definition</label>
+          <input type="checkbox" id="sp_high_definition">
+        </div>
+
+        <div class="sp-setting" title="Enables a higher contrast">
+          <label for="sp_high_contrast">High contrast</label>
+          <input type="checkbox" id="sp_high_contrast">
+        </div>
+
         <div class="sp-setting" title="Camera view">
           <label>View</label>
           <span class="sp-target-container" id="sp_target_container">
@@ -3465,13 +4374,6 @@ Shortcut key: 'f'">▴</button>
                     title="Right view
 Shortcut key: 'r'">▸</button>
           </span>
-        </div>
-
-        <div class="sp-setting" 
-             title="Enables a higher image resolution (decreases performance)"
-             id="sp_high_definition_div">
-          <label for="sp_high_definition">High Definition</label>
-          <input type="checkbox" id="sp_high_definition">
         </div>
 
         <h3>Orbit</h3>
@@ -3564,8 +4466,6 @@ Shortcut key: 'p'">⏸</button>
       <details open="true" class="sp-settings-container">
         <summary>Scene</summary>
 
-        <!-- TODO: add the 'rocket' setting -->
-
         <div class="sp-setting" 
              title="Enables non-realistic grid patterns
 (to better illustrate the physical phenomena)">
@@ -3618,6 +4518,27 @@ Shortcut key: 'p'">⏸</button>
               <button type="button">+</button>
             </span>
             <span id="sp_disc_temperature_value" class="sp-value"></span>
+          </div>
+        </div>
+
+        <h3>Rocket</h3>
+
+        <div class="sp-settings-container">
+          <div class="sp-setting" 
+               title="Average distance from the rocket (in meters)">
+            <label>Distance</label>
+            <span class="sp-slider-container">
+              <button type="button">-</button>
+              <input type="range" id="sp_rocket_distance">
+              <button type="button">+</button>
+            </span>
+            <span id="sp_rocket_distance_value" class="sp-value"></span>
+          </div>
+
+          <div class="sp-setting" 
+               title="Shows the observer's rocket">
+            <label for="sp_rocket">Enabled</label>
+            <input type="checkbox" id="sp_rocket">
           </div>
         </div>
 
