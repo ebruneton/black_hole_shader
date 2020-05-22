@@ -168,6 +168,10 @@ class Profile {
   }
 
   vec3 GetTangent(const int u_index, const int v_index) const {
+    vec3 n = GetNormal(u_index, v_index);
+    if (std::abs(n.z()) == 1.0) {
+      return vec3(1.0, 0.0, 0.0);
+    }
     const double theta = Theta(u_index);
     return vec3(-sin(theta), cos(theta), 0.0);
   }

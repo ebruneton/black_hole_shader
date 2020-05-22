@@ -128,7 +128,6 @@ const RENDER_SHADER =
     const float C = 2.43;
     const float D = 0.59;
     const float E = 0.14;
-    color = min(color, 10.0);
     color = (color * (A * color + B)) / (color * (C * color + D) + E);
     return pow(color, vec3(1.0 / 2.2));
   }
@@ -141,6 +140,7 @@ const RENDER_SHADER =
       color += uvw.z * texture(source, source_uv + uvw.xy).rgb;
     }
     color = mix(texture(source, source_uv).rgb, color, intensity) * exposure;
+    color = min(color, 10.0);
     if (high_contrast) {
       color = toneMapACES(color);
     } else {

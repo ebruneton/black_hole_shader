@@ -29,11 +29,14 @@
 
 (function() {
 
-const NEAR_PLANE = 0.01;
+const NEAR_PLANE = 0.1;
 const FAR_PLANE = 100;
 
+const ENV_MAP_LEVELS = 7;
+const ENV_MAP_SIZE = 1 << (ENV_MAP_LEVELS - 1);
+
 const EXHAUST_RADIUS = 0.514;
-const EXHAUST_Z_MIN = -10;
+const EXHAUST_Z_MIN = -20;
 const EXHAUST_Z_MAX = -2.1;
 
 const createShader = function(gl, type, source) {
@@ -98,17 +101,44 @@ class RocketManager {
     this.gl = gl;
     this.rocketProgram = undefined;
     this.exhaustProgram = undefined;
+    this.envMapTexture = undefined;
+    this.envMapFbo = undefined;
     this.rocketVertexBuffer = undefined;
     this.rocketIndexBuffer = undefined;
     this.exhaustVertexBuffer = undefined;
     this.exhaustIndexBuffer = undefined;
     this.baseColorTexture = loadRocketTexture(gl, 'rocket_base_color.png');
+    this.occlusionRoughnessMetallicTexture =
+        loadRocketTexture(gl, 'rocket_occlusion_roughness_metallic.png');
+    this.normalMapTexture = loadRocketTexture(gl, 'rocket_normal.png');
 
     this.createRocketProgram(gl);
     this.createExhaustProgram(gl);
+    this.createEnvMap(gl);
     loadRocketMesh('rocket.dat', 
         (vertices, indices) => this.createRocketBuffers(vertices, indices));
     this.createExhaustBuffers(gl);
+  }
+
+  createEnvMap(gl) {
+    this.envMapTexture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.envMapTexture);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.envMapTexture);
+    gl.texStorage2D(gl.TEXTURE_CUBE_MAP, ENV_MAP_LEVELS, gl.RGBA16F,
+        ENV_MAP_SIZE, ENV_MAP_SIZE);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER,
+                     gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    const glExt = gl.getExtension('EXT_texture_filter_anisotropic');
+    gl.texParameterf(gl.TEXTURE_CUBE_MAP, glExt.TEXTURE_MAX_ANISOTROPY_EXT, 
+                     gl.getParameter(glExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT));
+
+    this.envMapFbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.envMapFbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,   
+        gl.TEXTURE_CUBE_MAP_POSITIVE_X, this.envMapTexture, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
   createRocketProgram(gl) {
@@ -123,6 +153,7 @@ class RocketManager {
         gl.FRAGMENT_SHADER,
         `#version 300 es
         precision highp float;
+        const float ENV_MAP_SIZE = float(${ENV_MAP_SIZE});
         ${document.querySelector("#rocket_fragment_shader").innerHTML}`);
     const program = gl.createProgram();
     gl.attachShader(program, vertexShader);
@@ -131,12 +162,26 @@ class RocketManager {
 
     program.positionAttrib =
         gl.getAttribLocation(program, 'position_attribute');
+    program.normalAttrib =
+        gl.getAttribLocation(program, 'normal_attribute');
+    program.tangentAttrib =
+        gl.getAttribLocation(program, 'tangent_attribute');
     program.uvAttrib =
         gl.getAttribLocation(program, 'uv_attribute');
+    program.ambientOcclusionAttrib =
+        gl.getAttribLocation(program, 'ambient_occlusion_attribute');
     program.modelViewProjMatrix =
         gl.getUniformLocation(program, 'model_view_proj_matrix');
+    program.camera = 
+        gl.getUniformLocation(program, 'camera');
     program.baseColorTexture =
         gl.getUniformLocation(program, 'base_color_texture');
+    program.occlusionRoughnessMetallicTexture =
+        gl.getUniformLocation(program, 'occlusion_roughness_metallic_texture');
+    program.normalMapTexture =
+        gl.getUniformLocation(program, 'normal_map_texture');
+    program.envMapTexture =
+        gl.getUniformLocation(program, 'env_map_texture');
     this.rocketProgram = program;
   }
 
@@ -226,6 +271,91 @@ class RocketManager {
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);    
   }
 
+  renderEnvMap(program, quadVertexBuffer) {
+    const gl = this.gl;
+    const model = this.model;
+
+    const currentViewport = gl.getParameter(gl.VIEWPORT);
+    const currentFbo = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.envMapFbo);
+    gl.viewport(0, 0, ENV_MAP_SIZE, ENV_MAP_SIZE);
+
+    gl.useProgram(program);
+    gl.uniform3f(program.cameraSize, 
+        ENV_MAP_SIZE / 2, ENV_MAP_SIZE / 2, ENV_MAP_SIZE / 2);
+    gl.uniform3f(program.eTau,
+        model.rocketTau[1], model.rocketTau[2], model.rocketTau[3]);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, quadVertexBuffer);
+    gl.vertexAttribPointer(program.vertexAttrib, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(program.vertexAttrib);
+
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,   
+        gl.TEXTURE_CUBE_MAP_POSITIVE_X, this.envMapTexture, 0);
+    gl.uniform3f(program.eW,
+        -model.rocketD[1], -model.rocketD[2], -model.rocketD[3]);
+    gl.uniform3f(program.eH,
+        -model.rocketH[1], -model.rocketH[2], -model.rocketH[3]);
+    gl.uniform3f(program.eD,
+        -model.rocketW[1], -model.rocketW[2], -model.rocketW[3]);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,   
+        gl.TEXTURE_CUBE_MAP_NEGATIVE_X, this.envMapTexture, 0);
+    gl.uniform3f(program.eW,
+        model.rocketD[1], model.rocketD[2], model.rocketD[3]);
+    gl.uniform3f(program.eH,
+        -model.rocketH[1], -model.rocketH[2], -model.rocketH[3]);
+    gl.uniform3f(program.eD,
+        model.rocketW[1], model.rocketW[2], model.rocketW[3]);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,   
+        gl.TEXTURE_CUBE_MAP_POSITIVE_Y, this.envMapTexture, 0);
+    gl.uniform3f(program.eW,
+        model.rocketW[1], model.rocketW[2], model.rocketW[3]);
+    gl.uniform3f(program.eH,
+        model.rocketD[1], model.rocketD[2], model.rocketD[3]);
+    gl.uniform3f(program.eD,
+        -model.rocketH[1], -model.rocketH[2], -model.rocketH[3]);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,   
+        gl.TEXTURE_CUBE_MAP_NEGATIVE_Y, this.envMapTexture, 0);
+    gl.uniform3f(program.eW,
+        model.rocketW[1], model.rocketW[2], model.rocketW[3]);
+    gl.uniform3f(program.eH,
+        -model.rocketD[1], -model.rocketD[2], -model.rocketD[3]);
+    gl.uniform3f(program.eD,
+        model.rocketH[1], model.rocketH[2], model.rocketH[3]);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,   
+        gl.TEXTURE_CUBE_MAP_POSITIVE_Z, this.envMapTexture, 0);
+    gl.uniform3f(program.eW,
+        model.rocketW[1], model.rocketW[2], model.rocketW[3]);
+    gl.uniform3f(program.eH,
+        -model.rocketH[1], -model.rocketH[2], -model.rocketH[3]);
+    gl.uniform3f(program.eD,
+        -model.rocketD[1], -model.rocketD[2], -model.rocketD[3]);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,   
+        gl.TEXTURE_CUBE_MAP_NEGATIVE_Z, this.envMapTexture, 0);
+    gl.uniform3f(program.eW,
+        -model.rocketW[1], -model.rocketW[2], -model.rocketW[3]);
+    gl.uniform3f(program.eH,
+        -model.rocketH[1], -model.rocketH[2], -model.rocketH[3]);
+    gl.uniform3f(program.eD,
+        model.rocketD[1], model.rocketD[2], model.rocketD[3]);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    gl.disableVertexAttribArray(program.vertexAttrib);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, currentFbo);
+    gl.viewport(currentViewport[0], currentViewport[1], currentViewport[2],
+        currentViewport[3]);
+  }
+
   drawRocket() {
     if (!this.rocketVertexBuffer) return;
 
@@ -236,10 +366,20 @@ class RocketManager {
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.baseColorTexture);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.occlusionRoughnessMetallicTexture);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this.normalMapTexture);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.envMapTexture);
+    gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
 
     const program = this.rocketProgram;
     gl.useProgram(program);
     gl.uniform1i(program.baseColorTexture, 0);
+    gl.uniform1i(program.occlusionRoughnessMetallicTexture, 1);
+    gl.uniform1i(program.normalMapTexture, 2);
+    gl.uniform1i(program.envMapTexture, 3);
     this.setCameraUniforms(program);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.rocketVertexBuffer);
@@ -248,15 +388,27 @@ class RocketManager {
     gl.vertexAttribPointer(
         program.positionAttrib, 3, gl.FLOAT, false, stride, 0);
     gl.vertexAttribPointer(
+        program.normalAttrib, 3, gl.FLOAT, false, stride, 3 * 4);
+    gl.vertexAttribPointer(
+        program.tangentAttrib, 4, gl.FLOAT, false, stride, 6 * 4);
+    gl.vertexAttribPointer(
         program.uvAttrib, 2, gl.FLOAT, false, stride, 10 * 4);
+    gl.vertexAttribPointer(
+        program.ambientOcclusionAttrib, 1, gl.FLOAT, false, stride, 12 * 4);
     gl.enableVertexAttribArray(program.positionAttrib);
+    gl.enableVertexAttribArray(program.normalAttrib);
+    gl.enableVertexAttribArray(program.tangentAttrib);
     gl.enableVertexAttribArray(program.uvAttrib);
+    gl.enableVertexAttribArray(program.ambientOcclusionAttrib);
 
     gl.drawElements(
         gl.TRIANGLES, this.rocketIndexBuffer.size, gl.UNSIGNED_INT, 0);
 
     gl.disableVertexAttribArray(program.positionAttrib);
+    gl.disableVertexAttribArray(program.normalAttrib);
+    gl.disableVertexAttribArray(program.tangentAttrib);
     gl.disableVertexAttribArray(program.uvAttrib);
+    gl.disableVertexAttribArray(program.ambientOcclusionAttrib);
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.CULL_FACE);
   }
@@ -285,9 +437,9 @@ class RocketManager {
     const R2 = EXHAUST_RADIUS * EXHAUST_RADIUS;
     gl.uniform3f(program.kR, kR1 / R2, kR2 / R2, kR3 / R2);
 
-    const kZ1 = 13.5 + Math.cos((time + 1) / Math.sqrt(2));
-    const kZ2 = 11.5 + Math.cos((time + 2) / Math.sqrt(3));
-    const kZ3 = 9.5 + Math.cos(time);
+    const kZ1 = 27 + 2 * Math.cos((time + 1) / Math.sqrt(2));
+    const kZ2 = 23 + 2 * Math.cos((time + 2) / Math.sqrt(3));
+    const kZ3 = 19 + 2 * Math.cos(time);
     const DZ = EXHAUST_Z_MAX - EXHAUST_Z_MIN;
     gl.uniform3f(program.kZ, kZ1 / DZ, kZ2 / DZ, kZ3 / DZ);
     this.setCameraUniforms(program);

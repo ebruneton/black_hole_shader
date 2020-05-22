@@ -194,6 +194,7 @@ class CameraView {
     gl.disableVertexAttribArray(program.vertexAttrib);
 
     if (this.model.rocket.getValue()) {
+      this.rocketManager.renderEnvMap(program, this.vertexBuffer);
       this.rocketManager.drawRocket();
       if (this.model.gForce > 0) {
         this.rocketManager.drawExhaust(tauSeconds, this.model.gForce);
