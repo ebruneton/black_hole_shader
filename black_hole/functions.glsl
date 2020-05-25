@@ -166,7 +166,7 @@ Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
   Real fw1 = min(fwidth(ui1.x), fwidth(u1 == -1.0 ? u0 : u1));
   alpha0 = FilteredPulse(u_min, u_max, u0, fw0);
   alpha1 = FilteredPulse(u_min, u_max, u1, fw1);
-  if (abs(e_square - kMu) < min(fwidth(e_square), kMu)) {
+  if (s == 1.0 && abs(e_square - kMu) < min(fwidth(e_square), kMu)) {
     if (alpha0 < 0.99) u0 = 2.0 / (1.0 / u_min + 1.0 / u_max);
     if (alpha1 < 0.99) u1 = 2.0 / (1.0 / u_min + 1.0 / u_max);
   }
