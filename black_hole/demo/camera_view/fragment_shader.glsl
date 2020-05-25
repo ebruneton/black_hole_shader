@@ -152,8 +152,8 @@ vec4 GridDiscColor(vec2 p, float t, bool top_side, float doppler_factor,
   float value_phi = mod(p_phi / pi * 16.0, 1.0) < 0.2 ? 0.0 : 1.0;
   float value_r = mod(p_r / 2.0, 1.0) < 0.2 ? 0.0 : 1.0;
   vec3 color = BlackBodyColor(black_body_texture, temperature * doppler_factor);
-  color *= 0.2 + 0.8 * value_phi * value_r;
-  return vec4(top_side ? color : color * 0.01, 1.0);
+  float pattern = 0.2 + 0.8 * value_phi * value_r;
+  return vec4(color * (top_side ? pattern : 1.2 - pattern), 1.0);
 }
 
 float Noise(vec2 uv) {
