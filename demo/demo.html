@@ -3751,8 +3751,8 @@ vec4 GridDiscColor(vec2 p, float t, bool top_side, float doppler_factor,
   float value_phi = mod(p_phi / pi * 16.0, 1.0) < 0.2 ? 0.0 : 1.0;
   float value_r = mod(p_r / 2.0, 1.0) < 0.2 ? 0.0 : 1.0;
   vec3 color = BlackBodyColor(black_body_texture, temperature * doppler_factor);
-  color *= 0.2 + 0.8 * value_phi * value_r;
-  return vec4(top_side ? color : color * 0.01, 1.0);
+  float pattern = 0.2 + 0.8 * value_phi * value_r;
+  return vec4(color * (top_side ? pattern : 1.2 - pattern), 1.0);
 }
 
 float Noise(vec2 uv) {
@@ -3944,7 +3944,7 @@ Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
   Real fw1 = min(fwidth(ui1.x), fwidth(u1 == -1.0 ? u0 : u1));
   alpha0 = FilteredPulse(u_min, u_max, u0, fw0);
   alpha1 = FilteredPulse(u_min, u_max, u1, fw1);
-  if (abs(e_square - kMu) < min(fwidth(e_square), kMu)) {
+  if (s == 1.0 && abs(e_square - kMu) < min(fwidth(e_square), kMu)) {
     if (alpha0 < 0.99) u0 = 2.0 / (1.0 / u_min + 1.0 / u_max);
     if (alpha1 < 0.99) u1 = 2.0 / (1.0 / u_min + 1.0 / u_max);
   }
