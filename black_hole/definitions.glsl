@@ -27,6 +27,20 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*<h2>black_hole/definitions.glsl</h2>
+
+<p>This file defines the types which are used in the main
+<a href="functions.glsl.html">functions</a> of our <a href="../paper.pdf">black
+hole model</a>. A <a href="preprocess/definitions.h.html">C++ equivalent</a> of
+this file allows the same functions to be compiled by a C++ compiler (in order
+to unit test our <a href="preprocess/functions.h.html">preprocessing
+functions</a>).
+
+<p>To increase the code readability we introduce different "types" for
+dimensionless quantities and for angles, as well as for the two precomputed
+textures of our model:
+*/
+
 // The types used in the main functions of our black hole shader. C++ equivalent
 // of these types are used to compile these functions with a C++ compiler, both
 // to reuse them in order to precompute the textures they need, and for testing

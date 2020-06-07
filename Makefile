@@ -208,6 +208,21 @@ output/color_maps/doppler_texture_generator: \
     output/color_maps/doppler_texture_generator.o
 	$(GPP) $^ -o $@
 
+# Documentation
+
+CPP_SOURCES := $(shell find black_hole/preprocess -type f)
+GLSL_SOURCES := $(shell find black_hole/ -maxdepth 1 -name "*.glsl")
+DOC_SOURCES := $(CPP_SOURCES) $(GLSL_SOURCES) index
+
+doc: $(DOC_SOURCES:%=output/doc/%.html)
+
+output/doc/%.html: % output/tools/docgen tools/docgen_template.html
+	mkdir -p $(@D)
+	output/tools/docgen $< tools/docgen_template.html $@
+
+output/tools/docgen: output/tools/docgen_main.o
+	$(GPP) $< -o $@
+
 # Compilation.
 
 GPP_FLAGS := -Wall -Wmain -pedantic -pedantic-errors -std=c++11 -DNDEBUG \

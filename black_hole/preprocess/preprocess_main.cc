@@ -27,6 +27,14 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*<h2>black_hole/preprocess/preprocess_main.cc</h2>
+
+<p>This file provides a command line tool to generate the precomputed textures
+of our <a href="../../paper.pdf">black hole model</a>, and to save them into
+binary files. It simply calls the <a href="functions.h.html">preprocessing
+functions</a> and saves their result.
+*/
+
 #include <fstream>
 #include <iostream>
 #include "black_hole/preprocess/functions.h"

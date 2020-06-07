@@ -27,6 +27,25 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*<h2>black_hole/preprocess/functions.h</h2>
+
+<p>This file declares the preprocessing functions that generate the precomputed
+textures of our <a href="../../paper.pdf">black hole model</a>. It also
+declares the <a href="../functions.glsl.html">GLSL functions</a> that implement
+this model, and in particular the ones using the precomputed textures. The goal
+is to be able to check, in <a href="functions_test.cc.html">unit tests</a>, that
+ray deflection and accretion disc intersections, obtained via the precomputed
+textures, are close to reference values computed via direct numerical
+integration.
+
+<p><i><b>Note</b>: the code uses the same notations as those defined in our
+<a href="../../paper.pdf">black hole model</a></i>. For example,
+<code>p_r</code> and <code>delta</code> refer to $p^r$ and $\delta$, the origin
+and initial direction of a light ray, <code>alpha</code> refers to the
+orientation $\alpha$ of the accretion disc, <code>u_ic</code> and
+<code>u_oc</code> are the inverse of its inner and outer radius, etc.
+*/
+
 #ifndef BLACK_HOLE_PREPROCESS_FUNCTIONS_H_
 #define BLACK_HOLE_PREPROCESS_FUNCTIONS_H_
 
@@ -82,7 +101,7 @@ void ComputeRayInverseRadiusTexture(RayInverseRadiusTexture *texture);
 dimensional::Angle TraceRay(
     const RayDeflectionTexture &ray_deflection_texture,
     const RayInverseRadiusTexture &ray_inverse_radius_texture, Real p_r,
-    dimensional::Angle delta, dimensional::Angle alpha, Real u_min, Real u_max,
+    dimensional::Angle delta, dimensional::Angle alpha, Real u_ic, Real u_oc,
     Real &u0, dimensional::Angle &phi0, Real &t0, Real &alpha0, Real &u1,
     dimensional::Angle &phi1, Real &t1, Real &alpha1);
 

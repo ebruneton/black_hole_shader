@@ -307,7 +307,7 @@ void ComputeDopplerTexture(const std::string& file_name) {
 
 int main(int argc, char** argv) {
   if (argc < 2) {
-    std::cerr << "Usage: black_body_texture_generator <output file>"
+    std::cerr << "Usage: doppler_texture_generator <output file>"
               << std::endl;
     return -1;
   }

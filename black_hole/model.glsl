@@ -27,17 +27,21 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// Returns the color of a black body of the given temperature. The 1D texture
-// should contain this color at texture coord log(T / 100) / 6.
-vec3 BlackBodyColor(sampler2D black_body_texture, float temperature) {
-  float tex_u = (1.0 / 6.0) * log(temperature * (1.0 / 100.0));
-  return texture(black_body_texture, vec2(tex_u, 0.5)).rgb;
-}
+/*<h2>black_hole/model.glsl</h2>
+
+<p>This file provides a main <code>SceneColor</code> GLSL function, which
+computes the color of a fragment for a scene made of a black hole with an
+accretion disc, plus background stars and extended light sources (e.g. nebulae).
+This main function uses some abstract auxiliary functions, declared below. These
+functions must be provided by the user. A default implementation is provided for
+most of them, but other implementations can be used, for instance to render the
+scene in a non-realistic way for educational purposes.
+*/
 
 // Abstract functions, which must be implemented by the user:
 // - ray tracing function (see the default implementation in functions.glsl).
-Angle RayTrace(Real u, Real u_prime, Real e_square, Angle delta, Angle alpha,
-               Real u_min, Real u_max, out Real u0, out Angle phi0, out Real t0,
+Angle RayTrace(Real u, Real u_dot, Real e_square, Angle delta, Angle alpha,
+               Real u_ic, Real u_oc, out Real u0, out Angle phi0, out Real t0,
                out Real alpha0, out Real u1, out Angle phi1, out Real t1,
                out Real alpha1);
 // - Doppler function (see the default implementation below).
@@ -62,7 +66,12 @@ float Noise(vec2 uv);
 //   top or bottom side of the disc, and with the given Doppler factor.
 vec4 DiscColor(vec2 p, float t, bool top_side, float doppler_factor);
 
-// Default implementation for 'Doppler'.
+/*
+<p>This function provides a default implementation for <code>Doppler()</code>.
+It is designed to work with the 3D texture precomputed with
+<code>color_maps/doppler_texture_generator.cc</code>.
+*/
+
 // Returns the given color when shifted by the given Doppler factor. The 3D
 // texture should contain this color at texture coord (r, 2*g, d) where r, g is
 // the rg chromaticity and d = atan(log(doppler_factor) / 0.21) / 3 + 0.5.
@@ -79,9 +88,17 @@ vec3 DefaultDoppler(highp sampler3D doppler_texture, vec3 rgb,
   return sum * texture(doppler_texture, tex_coord).rgb;
 }
 
-// Default implementation for 'StarColor', which uses the two 'StarTextureColor'
-// functions above, and assumes they are based on a cube map. The following
-// constants must be provided by the user:
+/*
+<p>This function provides a default implementation for <code>StarColor()</code>,
+based on the custom texture filtering algorithm described in <a
+href="../paper.pdf">Section 3.3.2</a> of our model.
+*/
+
+// Returns the light emitted by the stars in the pixel footprint around 'dir',
+// times the given gravitational lensing amplification factor.
+// This implementation uses the two 'StarTextureColor' functions above, and
+// assumes that they are based on a cube map. The following constants must be
+// provided by the user:
 // - const float STARS_CUBE_MAP_SIZE = ...;
 // - const float MAX_FOOTPRINT_SIZE = ...;
 // - const float MAX_FOOTPRINT_LOD = ...;
@@ -153,7 +170,29 @@ vec3 DefaultStarColor(vec3 dir, float lensing_amplification_factor,
   return color_sum * lensing_amplification_factor;
 }
 
-// Default implementation for 'DiscColor'.
+/*
+<p>This function provides the light emitted by a black body, by using the 1D
+texture precomputed with
+<code>color_maps/black_body_texture_generator.cc</code>.
+*/
+
+// Returns the light emitted by a black body at the given temperature. The 1D
+// texture should contain this color at texture coord log(T / 100) / 6.
+vec3 BlackBodyColor(sampler2D black_body_texture, float temperature) {
+  float tex_u = (1.0 / 6.0) * log(temperature * (1.0 / 100.0));
+  return texture(black_body_texture, vec2(tex_u, 0.5)).rgb;
+}
+
+/*
+<p>This function provides a default implementation for <code>DiscColor()</code>,
+based on the accretion disc model described in
+<a href="../paper.pdf">Section 3.3.3</a> and 
+<a href="../paper.pdf">Appendix B</a> of our model.
+*/
+
+// Returns the light emitted by the accretion disc at 'p', at time 'p_t', 
+// shifted by the given Doppler factor. The 1D texture should contain the light
+// emitted by a black body at temperature T at texture coord log(T / 100) / 6.
 // The following constants must be provided by the user:
 // - const float INNER_DISC_R = ...;
 // - const float OUTER_DISC_R = ...;
@@ -200,6 +239,23 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
   return vec4(color * alpha, alpha);
 }
 
+/*
+<p>Finally, the main <code>SceneColor</code> function:
+<ul>
+<li>initializes the light beam parameters as described in 
+<a href="../paper.pdf">Section 3.2</a> of our model,</li>
+<li>calls the <code>RayTrace()</code> function to get the light ray deflection
+and the accretion disc intersections,</li>
+<li>computes the light emitted by the stars and the accretion disc with
+<code>StarColor()</code>, <code>GalaxyColor()</code> and
+<code>DiscColor()</code>,
+<li>computes the corresponding received light by computing the gravitational
+lensing effect and the Doppler and beaming effects as described in 
+<a href="../paper.pdf">Section 3.4</a> of our model,</li>
+<li>returns the composited star and disc colors.</li>
+</ul>
+*/
+
 // Finds the intersection of the given view ray with the scene, computes the
 // emitted light at these intersection points, computes the corresponding
 // received light, and composites and returns the final pixel color.
@@ -231,17 +287,17 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 e_tau, vec3 e_w,
   float delta = acos(clamp(dot(e_x_prime, normalize(d)), -1.0, 1.0));
 
   float u = 1.0 / camera_position[1];
-  float u_prime = -u / tan(delta);
-  float e_square = u_prime * u_prime + u * u * (1.0 - u);
+  float u_dot = -u / tan(delta);
+  float e_square = u_dot * u_dot + u * u * (1.0 - u);
   float e = -sqrt(e_square);
 
-  const float U_MIN = 1.0 / OUTER_DISC_R;
-  const float U_MAX = 1.0 / INNER_DISC_R;
+  const float U_IC = 1.0 / INNER_DISC_R;
+  const float U_OC = 1.0 / OUTER_DISC_R;
   float u0, phi0, t0, alpha0, u1, phi1, t1, alpha1;
-  float deflection = RayTrace(u, u_prime, e_square, delta, alpha, U_MIN, U_MAX,
+  float deflection = RayTrace(u, u_dot, e_square, delta, alpha, U_IC, U_OC,
                               u0, phi0, t0, alpha0, u1, phi1, t1, alpha1);
 
-  vec4 l = vec4(e / (1.0 - u), -u_prime, 0.0, u * u);
+  vec4 l = vec4(e / (1.0 - u), -u_dot, 0.0, u * u);
   float g_k_l_receiver = k_s.x * l.x * (1.0 - u) - k_s.y * l.y / (1.0 - u) -
                          u * dot(e_tau, e_y_prime) * l.w / (u * u);
 

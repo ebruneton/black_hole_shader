@@ -27,6 +27,20 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*<h2>black_hole/preprocess/definitions.h</h2>
+
+<p>This file defines the types used in the
+<a href="functions.h.html">preprocessing functions</a> that generate the
+precomputed textures of our <a href="../../paper.pdf">black hole model</a>.
+A <a href="../definitions.glsl.html">GLSL equivalent</a> of this file is used in
+the <a href="../functions.glsl.html">GLSL functions</a> that implement this
+model.
+
+<p>To increase the code readability we introduce different types for
+dimensionless quantities and for angles, as well as for the two precomputed
+textures of our model:
+*/
+
 #ifndef BLACK_HOLE_PREPROCESS_DEFINITIONS_H_
 #define BLACK_HOLE_PREPROCESS_DEFINITIONS_H_
 
