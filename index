@@ -74,7 +74,8 @@ href="demo/demo.html?or=913&oi=1297&cy=31306&os=839&sfy=1454&sfp=937&sfr=1458&ce
 <a href="images/rocket-static.jpg">
 <img src="images/rocket-static.jpg" width="100%">
 </a>
-<p>TODO [<a
+<p>A static observer represented with a rocket. To keep its position fixed
+instead of falling into the black hole, the rocket engine must be on [<a
 href="demo/demo.html?ct=1&cy=34040&cp=9725&ce=650&cb=495&or=440&od=1551&os=417&oi=819&bhm=518&dd=385&sr=1&sfy=2084&sfp=1270&sfr=1478
 ">demo</a>].
 </center>
@@ -86,7 +87,8 @@ href="demo/demo.html?ct=1&cy=34040&cp=9725&ce=650&cb=495&or=440&od=1551&os=417&o
 <a href="images/rocket-orbit.jpg">
 <img src="images/rocket-orbit.jpg" width="100%">
 </a>
-<p>TODO [<a
+<p>A freely falling observer orbiting around the black hole, represented with a
+rocket. By definition of free fall, the rocket engine must be off [<a
 href="demo/demo.html?ct=1&cy=2080&cp=9834&ce=650&cb=495&or=589&od=1551&os=417&oi=1185&bhm=518&dd=385&sr=1&sfy=1217&sfp=1354&sfr=1780&r=13.371984465210158&dr=0.08563563038247056&phi=5.975194248940934
 ">demo</a>].
 </center>
