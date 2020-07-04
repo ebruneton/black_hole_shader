@@ -1,27 +1,112 @@
 <html>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <link rel='stylesheet'
-        type='text/css'
-        href=
-'https://framework.web.cern.ch/framework/2.0/fonts/PTSansWeb/PTSansWeb.css'/>
-    <style>
-      body {
-        max-width: 75ch;
-        margin: 4ch auto 4ch auto;
-        font-family: 'PT Sans', sans-serif;
-      }
+      <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']]
+          },
+          TeX: {
+            equationNumbers: { autoNumber: 'AMS' },
+            Macros: { diff: "{\\mathrm d}" }
+          }
+        });
+      </script>
+      <script type="text/javascript"
+          src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+      </script>
+      <script type="text/javascript"
+          src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js">
+      </script>
+      <link rel='stylesheet'
+          type='text/css'
+          href='https://framework.web.cern.ch/framework/2.0/fonts/PTSansWeb/PTSansWeb.css'/>
+      <style>
+        body {
+          max-width: 75ch;
+          margin: 4ch auto 4ch auto;
+          font-family: 'PT Sans', sans-serif;
+        }
 
-      h1 {
-        text-align: center;
-        padding: 2ch 0 2ch 0;
-      }
+        h1 {
+          text-align: center;
+          padding: 2ch 0 2ch 0;
+        }
 
-      .author {
-        text-align: center;
-        padding: 0 0 2ch 0;
-      }
-    </style>
+        h5 {
+          font-weight: normal;
+          font-style: italic;
+        }
+
+        code {
+          font-size: 0.875rem;
+        }
+
+        svg {
+          display: block;
+          margin-top: 1em;
+          margin-left: auto;
+          margin-right: auto;
+          padding: 1ch;
+        }
+
+        .author {
+          text-align: center;
+          padding: 0 0 2ch 0;
+        }
+
+        .figure {
+          display: block;
+          margin-top: 1em;
+          margin-left: auto;
+          margin-right: auto;
+          padding: 1ch;
+        }
+
+        .caption {
+          margin-left: auto;
+          margin-right: auto;
+          max-width: 85%;
+        }
+
+        /* Pretty printing styles. Used with prettify.js. */
+
+        pre.prettyprint {
+          width: 80ch;
+          margin-left: 4ch;
+          background-color: #FAFAFF;
+          border-width: 1px;
+          border-style: solid;
+          border-color: #CCD;
+          padding: 1ch;
+          font-size: 0.875rem;
+        }
+
+        /* Plain text, declaration, variable name, function name. */
+        .pln, .dec, .var {
+          color: #000
+        }
+
+        /* String content, keyword, type name. */
+        .str, .kwd, .typ  {
+          color: #004
+        }
+
+        .kwd {
+          font-weight: bold;
+        }
+
+        /* A comment. */
+        .com {
+          color: #040
+        }
+
+        /* A literal value. */
+        .lit {
+          color: #066
+        }
+      </style>
+    </meta>
   </head>
 <body>
 <h1>A Real-time High-quality Black Hole Shader</h1>
@@ -32,25 +117,23 @@
 <a href="images/black_hole_near_orion.jpg">
 <img src="images/black_hole_near_orion.jpg" width="100%">
 </a>
-<p>A black hole near <a href="https://fr.wikipedia.org/wiki/Orion_(constellation)">Orion</a>, with 2 opposite images of a star around it [<a href="demo/demo.html?or=913&oi=1101&cy=34922&os=352&sfy=693&sfp=1540&sfr=1474&ce=565&bhm=401&cp=9754&dd=393&do=0&r=33.46792681553018&dr=0.00021588733170925666&phi=5.3331338829750825&dt=401
+<p>A black hole near <a
+href="https://fr.wikipedia.org/wiki/Orion_(constellation)">Orion</a>, with 2
+opposite images of a star around it [<a 
+href="demo/demo.html?or=913&oi=1101&cy=34922&os=352&sfy=693&sfp=1540&sfr=1474&ce=565&bhm=401&cp=9754&dd=393&do=0&r=33.46792681553018&dr=0.00021588733170925666&phi=5.3331338829750825&dt=401
 ">demo</a>].
 </center>
 
-<h2>Introduction</h2>
+<a name="introduction"/><h2>Introduction</h2>
 
-<p>We propose a real-time method to render high-quality images of a non-rotating
-black hole with an accretion disc and background stars. Our method is based on
-beam tracing, but uses precomputed tables to find the intersections of each
-curved light beam with the scene in constant time per pixel. It also uses a
-specific texture filtering scheme to integrate the contribution of the light
-sources to each beam.
+<p>We propose a <a href="paper.pdf">real-time method</a> to render high-quality
+images of a non-rotating black hole with an accretion disc and background stars.
+Our method is based on beam tracing, but uses precomputed tables to find the
+intersections of each curved light beam with the scene in constant time per
+pixel. It also uses a specific texture filtering scheme to integrate the 
+contribution of the light sources to each beam.
 
-<p><b>TODO</b> <i>provide a full description of the method</i>. The
-<a href="https://github.com/ebruneton/black_hole_shader">full source code</a>
-is available under the BSD license. See also our
-<a href="demo/demo.html">online demo</a>.
-
-<h2>Gallery</h2>
+<a name="gallery"><h2>Gallery</h2></a>
 
 <p>Here are some images obtained with our method.
 
@@ -61,7 +144,8 @@ is available under the BSD license. See also our
 <p>The <a href="https://en.wikipedia.org/wiki/Large_Magellanic_Cloud">Large
 Magellanic Cloud</a> forming an 
 <a href="https://en.wikipedia.org/wiki/Einstein_ring">Einstein ring</a>
-around the black hole [<a href="demo/demo.html?or=913&oi=1101&cy=1210&os=352&sfy=1416&sfp=1002&sfr=1461&ce=761&bhm=385&cp=8661&dd=362&do=0&r=33.46792681553018&dr=0.00021588733170925666&phi=5.3331338829750825&dt=401
+around the black hole [<a
+href="demo/demo.html?or=913&oi=1101&cy=1210&os=352&sfy=1416&sfp=1002&sfr=1461&ce=761&bhm=385&cp=8661&dd=362&do=0&r=33.46792681553018&dr=0.00021588733170925666&phi=5.3331338829750825&dt=401
 ">demo</a>].
 </center>
 
@@ -89,10 +173,147 @@ beaming effects</a>) [<a href="demo/demo.html?or=913&oi=1297&cy=31306&os=839&sfy
 <a href="images/black_hole_and_disc_doppler.jpg">
 <img src="images/black_hole_and_disc_doppler.jpg" width="100%">
 </a>
-<p>Same conditions as above, but with an accretion disc too [<a href="demo/demo.html?or=913&oi=1297&cy=31306&os=839&sfy=1454&sfp=937&sfr=1458&ce=518&bhm=1000&dd=424&do=0&dt=221&od=1017&r=5.771230799238891&dr=-0.05336767881847801&phi=1.6087927653582879
+<p>Same conditions as above, but with an accretion disc too [<a
+href="demo/demo.html?or=913&oi=1297&cy=31306&os=839&sfy=1454&sfp=937&sfr=1458&ce=518&bhm=1000&dd=424&do=0&dt=221&od=1017&r=5.771230799238891&dr=-0.05336767881847801&phi=1.6087927653582879
 ">demo</a>].
 </center>
 
+<br>
+<br>
+
+<center>
+<a href="images/rocket-static.jpg">
+<img src="images/rocket-static.jpg" width="100%">
+</a>
+<p>A static observer represented with a rocket. To keep its position fixed
+instead of falling into the black hole, the rocket engine must be on [<a
+href="demo/demo.html?ct=1&cy=34040&cp=9725&ce=650&cb=495&or=440&od=1551&os=417&oi=819&bhm=518&dd=385&sr=1&sfy=2084&sfp=1270&sfr=1478
+">demo</a>].
+</center>
+
+<br>
+<br>
+
+<center>
+<a href="images/rocket-orbit.jpg">
+<img src="images/rocket-orbit.jpg" width="100%">
+</a>
+<p>A freely falling observer orbiting around the black hole, represented with a
+rocket. By definition of free fall, the rocket engine must be off [<a
+href="demo/demo.html?ct=1&cy=2080&cp=9834&ce=650&cb=495&or=589&od=1551&os=417&oi=1185&bhm=518&dd=385&sr=1&sfy=1217&sfp=1354&sfr=1780&r=13.371984465210158&dr=0.08563563038247056&phi=5.975194248940934
+">demo</a>].
+</center>
+
+<a name="usage"/><h2>Usage</h2>
+
+<p>A demo illustrating our method is available <a
+href="demo/demo.html">online</a>. To recompile it and precompute all the data
+from the source code, clone the <a
+href="https://github.com/ebruneton/black_hole_shader">git repository</a>, init
+the submodules, and type <code>make</code> (this requires GNU make, the GNU C++
+compiler, the sed, curl and gunzip command line tools, and the libcurlpp-dev,
+libpng-dev, zlib1g-dev libraries).
+
+<a name="structure"/><h2>Structure</h2>
+
+<p>The source code is organized as follows:
+
+<code><ul>
+  <li>black_hole/<ul>
+    <li>demo/<ul>
+      <li>camera_view/</li>
+      <li>model/</li>
+      <li>orbit_panel/</li>
+      <li>rocket/</li>
+      <li>settings_panel/</li>
+      <li>url_params/</li>
+    </ul></li>
+    <li style="font-weight:bold;">preprocess/</li>
+    <li style="font-weight:bold;">definitions.glsl</li>
+    <li style="font-weight:bold;">functions.glsl</li>
+    <li style="font-weight:bold;">model.glsl</li>
+  </ul></li>
+  <li>bloom/</li>
+  <li>color_maps/</li>
+  <li>gaia_sky_map/</li>
+  <li>rocket/</li>
+  <li>tools/</li>
+</ul></code>
+
+<p>It consists of a small generic part (in bold), together with a more specific
+demo (everything else) showing how the generic model can be used in practice.
+
+<p>The generic part does not depend on the rest of the code, and is divided in
+two subparts: preprocessing and rendering. The preprocessing, in
+<code>black_hole/preprocess/</code>, implements the <code
+style="font-variant:small-caps;">Precompute</code> procedure in <a 
+href="paper.pdf">Algorithm 1</a> of our model. The rendering part, in the
+<code>black_hole/*.glsl</code> files, provides a library of GLSL functions
+implementing the <code style="font-variant:small-caps;">TraceRay</code>
+procedure in <a href="paper.pdf">Algorithm 1</a> of our model, but also our
+custom texture filtering method for stars, our accretion disc shading model,
+the gravitational lensing effect, and the relativistic Doppler and beaming
+effects.
+
+<p>The demo is also divided in a preprocessing part and a rendering part. The
+preprocessing code is used to generate
+
+<ul>
+  <li>parameters for the bloom shader effect (in <code>bloom/</code>),</li>
+  <li>textures for the stars, the Doppler effect, etc (in
+    <code>gaia_sky_map/</code> and <code>color_maps/</code>),</li>
+  <li>a 3D model for the rocket (in <code>rocket/</code>).</li>
+</ul>
+
+<p>The rendering part, in <code>black_hole/demo/</code>, is a WebGL 2
+application organized into several UI components interacting via a shared model:
+
+<ul>
+  <li>The <code>model/</code> component manages the state of the system, and
+    notifies its listeners when this state changes. In particular, it updates 
+    the camera position along its orbit, and the camera Lorentz transform, as
+    described in <a href="paper.pdf">Appendix C</a> of our model.</li>
+  <li>The <code>orbit_panel/</code> component presents a read-only, partial view
+    of this state in the top-right panel of the UI.</li>
+  <li>The <code>settings_panel/</code> component presents another part of this
+    state, in the top-left panel of the UI. This component allows the user to
+    modify some state parameters via checkboxes and range sliders.</li>
+  <li>The <code>url_params/</code> component presents the state as URL
+    parameters, so that the current view can be shared via URLs.</li>
+  <li>Finally, the <code>camera_view/</code> component renders the view from the
+    camera with WebGL 2, by using a small wrapper around our generic black hole
+    rendering functions (and the <code>rocket/</code> component to render the 3D
+    rocket).</li>
+</ul>
+
+<a name="documentation"/><h2>Documentation</h2>
+
+<p>The documentation of the generic black hole shader functions consists of a <a
+href="paper.pdf">general overview</a> of our method and algorithms, and a
+detailed description of their implementation:
+
+<code><ul>
+  <li>black_hole/<ul>
+    <li>preprocess/<ul>
+      <li><a href="black_hole/preprocess/definitions.h.html">
+        definitions.h</a></li>
+      <li><a href="black_hole/preprocess/functions.h.html">
+        functions.h</a></li>
+      <li><a href="black_hole/preprocess/functions.cc.html">
+        functions.cc</a></li>
+      <li><a href="black_hole/preprocess/functions_test.cc.html">
+        functions_test.cc</a></li>
+      <li><a href="black_hole/preprocess/preprocess_main.cc.html">
+        preprocess_main.cc</a></li>
+    </ul></li>
+    <li><a href="black_hole/definitions.glsl.html">definitions.glsl</a></li>
+    <li><a href="black_hole/functions.glsl.html">functions.glsl</a></li>
+    <li><a href="black_hole/model.glsl.html">model.glsl</a></li>
+  </ul></li>
+</ul></code>
+
+<p>The demo code is simpler and is documented with inline comments.
+
+</pre>
 </body>
 </html>
-

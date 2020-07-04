@@ -3656,8 +3656,8 @@ layout(location = 0) out vec4 frag_color;
 
 // Simple ray-tracing function to compute the intersections of a ray with the
 // scene, when the space-time geometry is assumed to be flat.
-float TraceRayEuclidean(float p_r, float delta, float alpha, float u_min,
-                        float u_max, out float u0, out float phi0, out float t0,
+float TraceRayEuclidean(float p_r, float delta, float alpha, float u_ic,
+                        float u_oc, out float u0, out float phi0, out float t0,
                         out float u1, out float phi1, out float t1) {
   float cos_delta = cos(delta);
   float sin_delta = sin(delta);
@@ -3668,7 +3668,7 @@ float TraceRayEuclidean(float p_r, float delta, float alpha, float u_min,
   u1 = -1.0;
   float t = p_r / (sin_delta / tan_alpha - cos_delta);
   float r = length(vec2(p_r + t * cos_delta, t * sin_delta));
-  if (t >= 0.0 && r * u_min <= 1.0 && r * u_max >= 1.0 &&
+  if (t >= 0.0 && r * u_oc <= 1.0 && r * u_ic >= 1.0 &&
       (deflection == 0.0 || t < p_r)) {
     u0 = 1.0 / r;
     phi0 = alpha;
@@ -3677,18 +3677,18 @@ float TraceRayEuclidean(float p_r, float delta, float alpha, float u_min,
   return deflection;
 }
 
-float RayTrace(float u, float u_prime, float e_square, float delta, float alpha,
-               float u_min, float u_max, out float u0, out float phi0,
+float RayTrace(float u, float u_dot, float e_square, float delta, float alpha,
+               float u_ic, float u_oc, out float u0, out float phi0,
                out float t0, out float alpha0, out float u1, out float phi1,
                out float t1, out float alpha1) {
 #if (LENSING == 1)
   return TraceRay(ray_deflection_texture, ray_inverse_radius_texture, u,
-                  u_prime, e_square, delta, alpha, u_min, u_max, u0, phi0, t0,
+                  u_dot, e_square, delta, alpha, u_ic, u_oc, u0, phi0, t0,
                   alpha0, u1, phi1, t1, alpha1);
 #else
   alpha0 = 1.0;
   alpha1 = 1.0;
-  return TraceRayEuclidean(1.0 / u, delta, alpha, u_min, u_max, u0, phi0, t0,
+  return TraceRayEuclidean(1.0 / u, delta, alpha, u_ic, u_oc, u0, phi0, t0,
                            u1, phi1, t1);
 #endif
 }
@@ -3745,8 +3745,8 @@ vec4 GridDiscColor(vec2 p, float t, bool top_side, float doppler_factor,
   if (p_r <= INNER_DISC_R || p_r >= OUTER_DISC_R) {
     return vec4(0.0);
   }
-  const float uM = 1.0 / 6.0;
-  const float dphi_dt = uM * sqrt(0.5 * uM) / (2.0 * pi);
+  const float u_avg = 1.0 / 6.0;
+  const float dphi_dt = u_avg * sqrt(0.5 * u_avg) / (2.0 * pi);
   float p_phi = atan(p.y, p.x) - t * dphi_dt;
   float value_phi = mod(p_phi / pi * 16.0, 1.0) < 0.2 ? 0.0 : 1.0;
   float value_r = mod(p_r / 2.0, 1.0) < 0.2 ? 0.0 : 1.0;
@@ -3784,6 +3784,7 @@ void main() {
     </script>
     <script type="x-shader/x-fragment" id="black_hole_shader">
 
+
 // The types used in the main functions of our black hole shader. C++ equivalent
 // of these types are used to compile these functions with a C++ compiler, both
 // to reuse them in order to precompute the textures they need, and for testing
@@ -3805,9 +3806,6 @@ void main() {
 // A 2D texture with TimedInverseDistance values.
 #define RayInverseRadiusTexture sampler2D
 
-// -----------------------------------------------------------------------------
-// Lookup function for D(e, u), the ray deflection texture.
-// -----------------------------------------------------------------------------
 
 const Real kMu = 4.0 / 27.0;
 
@@ -3819,6 +3817,7 @@ Real GetRayDeflectionTextureUFromEsquare(const Real e_square) {
   }
 }
 
+
 Real GetUapsisFromEsquare(const Real e_square) {
   Real x = (2.0 / kMu) * e_square - 1.0;
   return 1.0 / 3.0 + (2.0 / 3.0) * sin(asin(x) * (1.0 / 3.0));
@@ -3828,11 +3827,12 @@ Real GetRayDeflectionTextureVFromEsquareAndU(const Real e_square,
                                              const Real u) {
   if (e_square > kMu) {
     Real x = u < 2.0 / 3.0 ? -sqrt(2.0 / 3.0 - u) : sqrt(u - 2.0 / 3.0);
-    return (x + sqrt(2.0 / 3.0)) / (sqrt(1.0 / 3.0) + sqrt(2.0 / 3.0));
+    return (sqrt(2.0 / 3.0) + x) / (sqrt(2.0 / 3.0) + sqrt(1.0 / 3.0));
   } else {
     return 1.0 - sqrt(max(1.0 - u / GetUapsisFromEsquare(e_square), 0.0));
   }
 }
+
 
 Real GetTextureCoordFromUnitRange(const Real x, const int texture_size) {
   return 0.5 / Real(texture_size) + x * (1.0 - 1.0 / Real(texture_size));
@@ -3854,17 +3854,16 @@ TimedAngle LookupRayDeflection(IN(RayDeflectionTexture) ray_deflection_texture,
   return TimedAngle(texture(ray_deflection_texture, vec2(tex_u, tex_v)));
 }
 
-// -----------------------------------------------------------------------------
-// Lookup function for U(e, phi), the ray inverse radius texture.
-// -----------------------------------------------------------------------------
 
-Angle GetPhiUpFromEsquare(const Real e_square) {
-  return (e_square + 1.0) / (2.0 * e_square * sqrt(e_square) + 1.0 / 3.0) * rad;
+Angle GetPhiUbFromEsquare(const Real e_square) {
+  return (1.0 + e_square) / (1.0 / 3.0 + 2.0 * e_square * sqrt(e_square)) * rad;
 }
+
 
 Real GetRayInverseRadiusTextureUFromEsquare(const Real e_square) {
-  return 1.0 / (6.0 * e_square + 1.0);
+  return 1.0 / (1.0 + 6.0 * e_square);
 }
+
 
 TimedInverseDistance LookupRayInverseRadius(IN(RayInverseRadiusTexture)
                                                 ray_inverse_radius_texture,
@@ -3873,17 +3872,12 @@ TimedInverseDistance LookupRayInverseRadius(IN(RayInverseRadiusTexture)
   Real tex_u = GetTextureCoordFromUnitRange(
       GetRayInverseRadiusTextureUFromEsquare(e_square),
       RAY_INVERSE_RADIUS_TEXTURE_WIDTH);
-  Real tex_v = GetTextureCoordFromUnitRange(phi / GetPhiUpFromEsquare(e_square),
+  Real tex_v = GetTextureCoordFromUnitRange(phi / GetPhiUbFromEsquare(e_square),
                                             RAY_INVERSE_RADIUS_TEXTURE_HEIGHT);
   return TimedInverseDistance(
       texture(ray_inverse_radius_texture, vec2(tex_u, tex_v)));
 }
 
-// -----------------------------------------------------------------------------
-// Main "ray-tracing" function, using the above lookup functions to get the ray
-// deflection and the ray intersections with the accretion disc in constant time
-// (and at most 4 texture lookups).
-// -----------------------------------------------------------------------------
 
 // Anti-aliased pulse function. See
 // https://renderman.pixar.com/resources/RenderMan_20/basicAntialiasing.html.
@@ -3896,9 +3890,9 @@ Real FilteredPulse(Real edge0, Real edge1, Real x, Real fw) {
 
 Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
                IN(RayInverseRadiusTexture) ray_inverse_radius_texture,
-               const Real u, const Real u_prime, const Real e_square,
-               const Angle delta, const Angle alpha, const Real u_min,
-               const Real u_max, OUT(Real) u0, OUT(Angle) phi0, OUT(Real) t0,
+               const Real u, const Real u_dot, const Real e_square,
+               const Angle delta, const Angle alpha, const Real u_ic,
+               const Real u_oc, OUT(Real) u0, OUT(Angle) phi0, OUT(Real) t0,
                OUT(Real) alpha0, OUT(Real) u1, OUT(Angle) phi1, OUT(Real) t1,
                OUT(Real) alpha1) {
   // Compute the ray deflection.
@@ -3911,12 +3905,12 @@ Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
   TimedAngle deflection = LookupRayDeflection(ray_deflection_texture, e_square,
                                               u, deflection_apsis);
   Angle ray_deflection = deflection.x;
-  if (u_prime > 0.0) {
+  if (u_dot > 0.0) {
     ray_deflection =
-        e_square > kMu ? -1.0 * rad : 2.0 * deflection_apsis.x - ray_deflection;
+        e_square < kMu ? 2.0 * deflection_apsis.x - ray_deflection : -1.0 * rad;
   }
   // Compute the accretion disc intersections.
-  Real s = sign(u_prime);
+  Real s = sign(u_dot);
   Angle phi = deflection.x + (s == 1.0 ? pi - delta : delta) + s * alpha;
   Angle phi_apsis = deflection_apsis.x + pi / 2.0;
   phi0 = mod(phi, pi);
@@ -3942,11 +3936,11 @@ Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
   // Compute the anti-aliasing opacity values.
   Real fw0 = min(fwidth(ui0.x), fwidth(u0 == -1.0 ? u1 : u0));
   Real fw1 = min(fwidth(ui1.x), fwidth(u1 == -1.0 ? u0 : u1));
-  alpha0 = FilteredPulse(u_min, u_max, u0, fw0);
-  alpha1 = FilteredPulse(u_min, u_max, u1, fw1);
+  alpha0 = FilteredPulse(u_oc, u_ic, u0, fw0);
+  alpha1 = FilteredPulse(u_oc, u_ic, u1, fw1);
   if (s == 1.0 && abs(e_square - kMu) < min(fwidth(e_square), kMu)) {
-    if (alpha0 < 0.99) u0 = 2.0 / (1.0 / u_min + 1.0 / u_max);
-    if (alpha1 < 0.99) u1 = 2.0 / (1.0 / u_min + 1.0 / u_max);
+    if (alpha0 < 0.99) u0 = 2.0 / (1.0 / u_ic + 1.0 / u_oc);
+    if (alpha1 < 0.99) u1 = 2.0 / (1.0 / u_ic + 1.0 / u_oc);
   }
   return ray_deflection;
 }
@@ -3954,28 +3948,22 @@ Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
 Angle TraceRay(IN(RayDeflectionTexture) ray_deflection_texture,
                IN(RayInverseRadiusTexture) ray_inverse_radius_texture,
                const Real p_r, const Angle delta, const Angle alpha,
-               const Real u_min, const Real u_max, OUT(Real) u0,
+               const Real u_ic, const Real u_oc, OUT(Real) u0,
                OUT(Angle) phi0, OUT(Real) t0, OUT(Real) alpha0, OUT(Real) u1,
                OUT(Angle) phi1, OUT(Real) t1, OUT(Real) alpha1) {
   Real u = 1.0 / p_r;
-  Real u_prime = -u / tan(delta);
-  Real e_square = u_prime * u_prime + u * u * (1.0 - u);
+  Real u_dot = -u / tan(delta);
+  Real e_square = u_dot * u_dot + u * u * (1.0 - u);
   return TraceRay(ray_deflection_texture, ray_inverse_radius_texture, u,
-                  u_prime, e_square, delta, alpha, u_min, u_max, u0, phi0, t0,
+                  u_dot, e_square, delta, alpha, u_ic, u_oc, u0, phi0, t0,
                   alpha0, u1, phi1, t1, alpha1);
 }
 
-// Returns the color of a black body of the given temperature. The 1D texture
-// should contain this color at texture coord log(T / 100) / 6.
-vec3 BlackBodyColor(sampler2D black_body_texture, float temperature) {
-  float tex_u = (1.0 / 6.0) * log(temperature * (1.0 / 100.0));
-  return texture(black_body_texture, vec2(tex_u, 0.5)).rgb;
-}
 
 // Abstract functions, which must be implemented by the user:
 // - ray tracing function (see the default implementation in functions.glsl).
-Angle RayTrace(Real u, Real u_prime, Real e_square, Angle delta, Angle alpha,
-               Real u_min, Real u_max, out Real u0, out Angle phi0, out Real t0,
+Angle RayTrace(Real u, Real u_dot, Real e_square, Angle delta, Angle alpha,
+               Real u_ic, Real u_oc, out Real u0, out Angle phi0, out Real t0,
                out Real alpha0, out Real u1, out Angle phi1, out Real t1,
                out Real alpha1);
 // - Doppler function (see the default implementation below).
@@ -4000,7 +3988,7 @@ float Noise(vec2 uv);
 //   top or bottom side of the disc, and with the given Doppler factor.
 vec4 DiscColor(vec2 p, float t, bool top_side, float doppler_factor);
 
-// Default implementation for 'Doppler'.
+
 // Returns the given color when shifted by the given Doppler factor. The 3D
 // texture should contain this color at texture coord (r, 2*g, d) where r, g is
 // the rg chromaticity and d = atan(log(doppler_factor) / 0.21) / 3 + 0.5.
@@ -4017,9 +4005,12 @@ vec3 DefaultDoppler(highp sampler3D doppler_texture, vec3 rgb,
   return sum * texture(doppler_texture, tex_coord).rgb;
 }
 
-// Default implementation for 'StarColor', which uses the two 'StarTextureColor'
-// functions above, and assumes they are based on a cube map. The following
-// constants must be provided by the user:
+
+// Returns the light emitted by the stars in the pixel footprint around 'dir',
+// times the given gravitational lensing amplification factor.
+// This implementation uses the two 'StarTextureColor' functions above, and
+// assumes that they are based on a cube map. The following constants must be
+// provided by the user:
 // - const float STARS_CUBE_MAP_SIZE = ...;
 // - const float MAX_FOOTPRINT_SIZE = ...;
 // - const float MAX_FOOTPRINT_LOD = ...;
@@ -4091,7 +4082,18 @@ vec3 DefaultStarColor(vec3 dir, float lensing_amplification_factor,
   return color_sum * lensing_amplification_factor;
 }
 
-// Default implementation for 'DiscColor'.
+
+// Returns the light emitted by a black body at the given temperature. The 1D
+// texture should contain this color at texture coord log(T / 100) / 6.
+vec3 BlackBodyColor(sampler2D black_body_texture, float temperature) {
+  float tex_u = (1.0 / 6.0) * log(temperature * (1.0 / 100.0));
+  return texture(black_body_texture, vec2(tex_u, 0.5)).rgb;
+}
+
+
+// Returns the light emitted by the accretion disc at 'p', at time 'p_t', 
+// shifted by the given Doppler factor. The 1D texture should contain the light
+// emitted by a black body at temperature T at texture coord log(T / 100) / 6.
 // The following constants must be provided by the user:
 // - const float INNER_DISC_R = ...;
 // - const float OUTER_DISC_R = ...;
@@ -4138,6 +4140,7 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
   return vec4(color * alpha, alpha);
 }
 
+
 // Finds the intersection of the given view ray with the scene, computes the
 // emitted light at these intersection points, computes the corresponding
 // received light, and composites and returns the final pixel color.
@@ -4169,17 +4172,17 @@ vec3 SceneColor(vec4 camera_position, vec3 p, vec4 k_s, vec3 e_tau, vec3 e_w,
   float delta = acos(clamp(dot(e_x_prime, normalize(d)), -1.0, 1.0));
 
   float u = 1.0 / camera_position[1];
-  float u_prime = -u / tan(delta);
-  float e_square = u_prime * u_prime + u * u * (1.0 - u);
+  float u_dot = -u / tan(delta);
+  float e_square = u_dot * u_dot + u * u * (1.0 - u);
   float e = -sqrt(e_square);
 
-  const float U_MIN = 1.0 / OUTER_DISC_R;
-  const float U_MAX = 1.0 / INNER_DISC_R;
+  const float U_IC = 1.0 / INNER_DISC_R;
+  const float U_OC = 1.0 / OUTER_DISC_R;
   float u0, phi0, t0, alpha0, u1, phi1, t1, alpha1;
-  float deflection = RayTrace(u, u_prime, e_square, delta, alpha, U_MIN, U_MAX,
+  float deflection = RayTrace(u, u_dot, e_square, delta, alpha, U_IC, U_OC,
                               u0, phi0, t0, alpha0, u1, phi1, t1, alpha1);
 
-  vec4 l = vec4(e / (1.0 - u), -u_prime, 0.0, u * u);
+  vec4 l = vec4(e / (1.0 - u), -u_dot, 0.0, u * u);
   float g_k_l_receiver = k_s.x * l.x * (1.0 - u) - k_s.y * l.y / (1.0 - u) -
                          u * dot(e_tau, e_y_prime) * l.w / (u * u);
 
