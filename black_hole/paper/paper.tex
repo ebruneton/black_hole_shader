@@ -154,13 +154,13 @@ The space-time geometry around a non-rotating black hole can be described with
 the Schwarzschild metric. In units such that the radius of the black hole's 
 event horizon and the speed of light are 1, this metric is
 \begin{equation}
-\diff\tau^2 = \left(1 - \frac{1}{r}\right) \diff t^2 -
-              \left(1 - \frac{1}{r}\right)^{-1} \diff r^2 -
-              r^2 \diff \theta^2 - 
-              r^2 \sin^2\theta \diff \phi^2
+\diff s^2 = \left(1 - \frac{1}{r}\right) \diff t^2 -
+            \left(1 - \frac{1}{r}\right)^{-1} \diff r^2 -
+            r^2 \diff \theta^2 - 
+            r^2 \sin^2\theta \diff \phi^2
 \label{eq:metric}
 \end{equation}
-where $\tau$ is the proper time and $(t, r, \theta, \phi)$ are the 
+where $\diff s$ is the line element and $(t, r, \theta, \phi)$ are the 
 Schwarzschild coordinates~\cite{weinberg1972}. $r, \theta, \phi$ are 
 (pseudo-)spherical coordinates, and in the following we also use the 
 corresponding (pseudo-)Cartesian coordinates $x,y,z$, as well as the inverse 
@@ -217,17 +217,18 @@ observer at $p$. An orthonormal basis for the camera is thus $\vec{e}_{\tau},
 \vec{e}_i = {\Lambda_i}^j \vec{e}_j, \quad i \in \{\tau, w, h, d\}, \quad j \in 
 \{t, r, \theta, \phi\} \label{eq:camerabasis}
 \end{equation}
-For a pinhole camera with focal length $f$, the initial beam direction 
-$\mathbf{d}$ for a pixel with screen coordinates $q^w, q^h$ is thus (see 
+where $\vec{e}_{\tau}$ is the camera 4-velocity and $\vec{e}_w, \vec{e}_h, 
+\vec{e}_d$ define its orientation. For a pinhole camera with focal length $f$, 
+and since beams are traced backward, the initial beam direction $\mathbf{d}$ 
+for a pixel with screen coordinates $q^w, q^h$ is (see 
 Fig.~\ref{fig:notations:a})
 \begin{equation}
-{\mathbf d} = -\sqrt{(q^w)^2 + (q^h)^2 + f^2}\ {\mathbf e}_{\tau} + 
-              q^w {\mathbf e}_w + 
-              q^h {\mathbf e}_h - 
-              f {\mathbf e}_d
+{\mathbf d} = -{\mathbf e}_{\tau} + \frac{q^w {\mathbf e}_w + 
+	q^h {\mathbf e}_h - f {\mathbf e}_d}{\sqrt{(q^w)^2 + (q^h)^2 + f^2}}
 \label{eq:d}
 \end{equation}
-where ${\mathbf e}$ denotes the spatial part of a 4-vector $\vec{e}$.
+where ${\mathbf v}$ denotes the projection of $\vec{v}$ on the $\vec{e}_r, 
+\vec{e}_\theta, \vec{e}_\phi$ hyperplane.
 
 We now take advantage of the spherical symmetry of the metric, and of the fact 
 that its geodesics are planar~\cite{weinberg1972}, to reduce ${\mathbf d}$ to a 
@@ -268,17 +269,19 @@ The second step of our method is to compute the beam intersections with the
 scene, and the light emitted there. For this we first need to determine the 
 geodesic followed by the beam's axial ray.
 
-For light rays $\diff\tau = 0$, and there exist curvilinear coordinates 
+For light rays $\diff s = 0$, and there exist curvilinear coordinates 
 $\sigma$, defined up to an affine transform, such that $(1-u)\diff t / \diff 
 \sigma$ and $r^2 \sin^2\vartheta \diff \varphi  /\diff \sigma$ are constant 
-along the ray~\cite{weinberg1972}. We can thus choose $\sigma$ such that
+along the ray~\cite{weinberg1972}. We can thus choose $\sigma$ such that the 
+second constant is $1$, leading to
 \begin{equation}
 (1 - u)\frac{\diff t}{\diff \sigma} = e \quad \mathrm{and} \quad
     \sin^2\vartheta \frac{\diff \varphi}{\diff \sigma} = u^2 
 \label{eq:motionconstants}
 \end{equation}
-where $e$ is a constant of motion. By substituting this in \eqref{eq:metric} 
-with $\diff \tau = 0$ and $\vartheta = \pi/2$ we get the geodesic equation
+where $e$ happens to be the inverse of the ray's impact parameter (see 
+Fig.~\ref{fig:notations:d}). By substituting this in \eqref{eq:metric} with 
+$\diff s = 0$ and $\vartheta = \pi/2$ we get the geodesic equation
 \begin{equation}
 \dot{u}^2 \triangleq \left(\frac{\diff u}{\diff \varphi}\right)^2 
     = e^2 - u^2 (1 - u) \quad \Rightarrow \quad
@@ -531,22 +534,15 @@ Due to gravitational and relativistic time dilation and length contraction
 effects, the frequency $\nu$ of the received light differs from the emitted 
 frequency $\nu'$. The ratio is given by~\cite{Philipp2017}
 \begin{equation}
-\frac{\nu}{\nu'} = \frac{g(\vec{k}, \vec{l})}{g'(\vec{k}', \vec{l}')} =
-    \frac{g_{tt} k^t l^t + 
-    	    g_{rr} k^r l^r +
-    	    g_{\theta\theta} k^\theta l^\theta +
-          g_{\phi\phi} k^\phi l^\phi}
-         {g'_{tt} k'^t l'^t + 
-         	g'_{rr}k'^rl'^r +
-        	g'_{\theta\theta} k'^\theta l'^\theta +
-	        g'_{\phi\phi} k'^\phi l'^\phi}
+\frac{\nu}{\nu'} = \frac{g(\vec{k}, \vec{l})}{g(\vec{k}', \vec{l}')}
 \label{eq:Doppler}
 \end{equation}
-where $g_{jj}$ are the metric coefficients at the receiver, $\vec{k}$ is the 
-4-velocity of the receiver, $\vec{l}$ is the tangent 4-vector $\diff s / \diff 
-\sigma$,  at the receiver, of the light ray curve $s(\sigma)$, and $g'_{jj}$, 
+where $\vec{k}$ is the 4-velocity of the receiver, $\vec{l}$ is the tangent 
+4-vector $\diff s / \diff 
+\sigma$,  at the receiver, of the light ray curve $s(\sigma)$, and  
 $\vec{k}'$ and $\vec{l}'$ are the corresponding emitter quantities. We thus 
-need $\vec{k}$, $\vec{k}'$, $\vec{l}$, and $\vec{l}'$.
+need $\vec{k}$, $\vec{k}'$, $\vec{l}$, and $\vec{l}'$, that we compute as 
+follows.
 
 In {\em rotated} Schwarzschild coordinates, $\vec{l}$ and $\vec{l}'$ are 
 given by $[\diff t / \diff \sigma, \diff r / \diff \sigma, \diff \vartheta / 
@@ -732,8 +728,8 @@ is simple to implement and achieves high frame rates. Extending it to views
 from inside the horizon, and to rotating black holes, if this is possible, is 
 left as future work.
 
-%\paragraph*{Acknowledgments} We would like to thank $\ldots$ for proofreading 
-%this paper.
+\paragraph*{Acknowledgments} We would like to thank Alain Riazuelo for 
+proofreading this paper.
 
 \appendix
 \section{Texture mappings}\label{sec:texmapping}
@@ -752,6 +748,8 @@ coordinates
 \begin{equation*}
 \left[\frac{1}{1 + 6 e^2},\ \frac{\varphi}{3} \frac{1 + 6 e^3}{1 + e^2}\right]
 \end{equation*}
+as explained at 
+\url{https://ebruneton.github.io/black_hole_shader/black_hole/functions.glsl.html}.
 
 \section{Disc particles}\label{sec:discparticles}
 
