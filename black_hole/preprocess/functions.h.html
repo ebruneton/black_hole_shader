@@ -140,19 +140,19 @@
 </pre><h2>black_hole/preprocess/functions.h</h2>
 
 <p>This file declares the preprocessing functions that generate the precomputed
-textures of our <a href="../../paper.pdf">black hole model</a>. It also
-declares the <a href="../functions.glsl.html">GLSL functions</a> that implement
-this model, and in particular the ones using the precomputed textures. The goal
-is to be able to check, in <a href="functions_test.cc.html">unit tests</a>, that
-ray deflection and accretion disc intersections, obtained via the precomputed
-textures, are close to reference values computed via direct numerical
-integration.
+textures of our <a href="https://arxiv.org/abs/2010.08735">black hole model</a>.
+It also declares the <a href="../functions.glsl.html">GLSL functions</a> that
+implement this model, and in particular the ones using the precomputed textures.
+The goal is to be able to check, in
+<a href="functions_test.cc.html">unit tests</a>, that ray deflection and
+accretion disc intersections, obtained via the precomputed textures, are close
+to reference values computed via direct numerical integration.
 
 <p><i><b>Note</b>: the code uses the same notations as those defined in our
-<a href="../../paper.pdf">black hole model</a></i>. For example,
-<code>p_r</code> and <code>delta</code> refer to $p^r$ and $\delta$, the origin
-and initial direction of a light ray, <code>alpha</code> refers to the
-orientation $\alpha$ of the accretion disc, <code>u_ic</code> and
+<a href="https://arxiv.org/abs/2010.08735">black hole model</a></i>. For
+example, <code>p_r</code> and <code>delta</code> refer to $p^r$ and $\delta$,
+the origin and initial direction of a light ray, <code>alpha</code> refers to
+the orientation $\alpha$ of the accretion disc, <code>u_ic</code> and
 <code>u_oc</code> are the inverse of its inner and outer radius, etc.
 <pre class="prettyprint">
 #ifndef BLACK_HOLE_PREPROCESS_FUNCTIONS_H_

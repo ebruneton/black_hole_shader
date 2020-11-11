@@ -140,19 +140,19 @@
 </pre><h2>black_hole/functions.glsl</h2>
 
 <p>This GLSL file contains the core functions that implement our
-<a href="../paper.pdf ">black hole model</a>. It provides functions to compute
-the deflection and the accretion disc intersections of a light ray, in constant
-time, by using precomputed textures.
+<a href="https://arxiv.org/abs/2010.08735">black hole model</a>. It provides
+functions to compute the deflection and the accretion disc intersections of a
+light ray, in constant time, by using precomputed textures.
 
 <p><i><b>Note</b>: the notations used below are defined in the description of
-our <a href="../paper.pdf">black hole model</a></i>. The code uses the same
-notations (e.g. <code>e_square</code> refer to $e^2$, <code>kMu</code> to $\mu$,
-etc).
+our <a href="https://arxiv.org/abs/2010.08735">black hole model</a></i>. The
+code uses the same notations (e.g. <code>e_square</code> refer to $e^2$,
+<code>kMu</code> to $\mu$, etc).
 
 <a name="ray_deflection"><h3>Ray deflection</h3>
 
-<p>As described in <a href="../paper.pdf">Section 3.3.2</a>, our
-model uses a precomputed table $\mathbb{D}(e,u)$ for the ray deflection
+<p>As described in <a href="https://arxiv.org/abs/2010.08735">Section 3.3.2</a>,
+our model uses a precomputed table $\mathbb{D}(e,u)$ for the ray deflection
 $\Delta$. In order to store this table in a texture, we need a
 <a href="https://en.wikipedia.org/wiki/Map_(mathematics)">mapping</a> from the
 $(e,u)$ parameters to texture coordinates in $[0,1]\times[0,1]$. And for this we
@@ -197,10 +197,11 @@ texture coordinate with a simple scaling factor, we would get a very small
 number of texels near the discontinuity, and thus an important loss of
 precision. Also the discontinuity itself would lead to invalid texture
 interpolations. To solve this, we use a more complex texture coordinate mapping
-for $e$, defined in <a href="../paper.pdf">Appendix A</a> of our model and
-implemented by the function below. As shown in <a href="#fig1">Fig. 1</a>,
-this ad-hoc mapping removes the discontinuity and the large slopes, thus solving
-the sampling density and precision issues mentioned above.
+for $e$, defined in <a href="https://arxiv.org/abs/2010.08735">Appendix A</a> of
+our model and implemented by the function below. As shown in
+<a href="#fig1">Fig. 1</a>, this ad-hoc mapping removes the discontinuity and
+the large slopes, thus solving the sampling density and precision issues
+mentioned above.
 <pre class="prettyprint">
 const Real kMu = 4.0 / 27.0;
 
@@ -262,11 +263,12 @@ function of the texture coordinate given by
 <p><a name="deflection_mapping_v">To avoid these large slopes (which cause
 precision issues as explained above), while remapping $u_a(e)$ to $1$, we use
 for $u$ the texture coordinate mapping defined in
-<a href="../paper.pdf">Appendix A</a> of our model and implemented by the
-function below (where <code>GetUapsisFromEsquare</code> computes $u_a$ with
-<a href="../paper.pdf">Eq. 9</a>). As shown in <a href="#fig2">Fig. 2</a>, this
-ad-hoc mapping removes the large slopes and unused parameter intervals, thus
-solving the sampling density and precision issues mentioned above.
+<a href="https://arxiv.org/abs/2010.08735">Appendix A</a> of our model and
+implemented by the function below (where <code>GetUapsisFromEsquare</code>
+computes $u_a$ with <a href="https://arxiv.org/abs/2010.08735">Eq. 9</a>). As
+shown in <a href="#fig2">Fig. 2</a>, this ad-hoc mapping removes the large
+slopes and unused parameter intervals, thus solving the sampling density and
+precision issues mentioned above.
 <pre class="prettyprint">
 Real GetUapsisFromEsquare(const Real e_square) {
   Real x = (2.0 / kMu) * e_square - 1.0;
@@ -313,10 +315,10 @@ values are stored at texel centers.
 
 <a name="ray_inverse_radius"><h3>Ray inverse radius</h3>
 
-<p>As described in <a href="../paper.pdf">Section 3.3.3</a>, our model
-uses a precomputed table $\mathbb{U}(e,\varphi)$ for the ray inverse radius $u$.
-In order to store this table in a texture, we need a mapping from the
-$(e,\varphi)$ parameters, in $\mathbb{R}^+ \times [0,\pi]$, to texture
+<p>As described in <a href="https://arxiv.org/abs/2010.08735">Section 3.3.3</a>, 
+our model uses a precomputed table $\mathbb{U}(e,\varphi)$ for the ray inverse
+radius $u$. In order to store this table in a texture, we need a mapping from
+the $(e,\varphi)$ parameters, in $\mathbb{R}^+ \times [0,\pi]$, to texture
 coordinates in $[0,1] \times [0,1]$. And for this we need to solve several
 issues.
 
@@ -331,8 +333,8 @@ $\varphi_{1/3}(e)$ is mapped to $1$ to solve the large slope issues.
 Unfortunately, $\varphi_{1/3}(e)$ does not have an analytical expression. So we
 use instead an upper bound $\varphi_{ub}(e) \ge \varphi_{1/3}(e)$, as simple and
 as close as possible to $\varphi_{1/3}(e)$, defined in
-<a href="../paper.pdf">Appendix A</a> of our model and implemented by the
-following function:
+<a href="https://arxiv.org/abs/2010.08735">Appendix A</a> of our model and
+implemented by the following function:
 <pre class="prettyprint">
 Angle GetPhiUbFromEsquare(const Real e_square) {
   return (1.0 + e_square) / (1.0 / 3.0 + 2.0 * e_square * sqrt(e_square)) * rad;
@@ -396,8 +398,8 @@ $\mathbb{U}(e,\varphi_{ub}(e))$ as a function of $e$. <i>Right</i>: same plot,
 
 <p>To get more samples in this area while remapping the unbounded range to
 $[0,1]$ we use the ad-hoc mapping function for $e$ defined in
-<a href="../paper.pdf">Appendix A</a> of our model and implemented as follows
-(see <a href="#fig4">Fig. 4</a>):
+<a href="https://arxiv.org/abs/2010.08735">Appendix A</a> of our model and
+implemented as follows (see <a href="#fig4">Fig. 4</a>):
 <pre class="prettyprint">
 Real GetRayInverseRadiusTextureUFromEsquare(const Real e_square) {
   return 1.0 / (1.0 + 6.0 * e_square);
@@ -423,9 +425,9 @@ TimedInverseDistance LookupRayInverseRadius(IN(RayInverseRadiusTexture)
 
 <p>We can finally implement the <span 
 style="font-variant:small-caps;">TraceRay</span> procedure in
-<a href="../paper.pdf">Algorithm 1</a> of our black hole model, which computes
-the ray deflection and accretion disc intersections in constant time, by using
-the above texture lookup functions.
+<a href="https://arxiv.org/abs/2010.08735">Algorithm 1</a> of our black hole
+model, which computes the ray deflection and accretion disc intersections in
+constant time, by using the above texture lookup functions.
 <pre class="prettyprint">
 // Anti-aliased pulse function. See
 // https://renderman.pixar.com/resources/RenderMan_20/basicAntialiasing.html.

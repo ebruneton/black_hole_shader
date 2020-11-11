@@ -144,7 +144,7 @@ and accretion disc intersections, obtained via the precomputed textures, are
 close to reference values computed via direct numerical integration.
 
 <p><i><b>Note</b>: the code uses the same notations as those defined in our
-<a href="../../paper.pdf">black hole model</a></i>.
+<a href="https://arxiv.org/abs/2010.08735">black hole model</a></i>.
 <pre class="prettyprint">
 #include "black_hole/preprocess/functions.h"
 
@@ -171,11 +171,12 @@ constexpr double kUoc = 0.0;
 </pre>
 <p>For this we implement the reference function below, to compute the deflection
 of a light ray, from a given origin and initial direction, by numerically
-integrating the geodesic equation - i.e. <a href="../../paper.pdf">Eq. (8)</a>
-in our model. Also we compute the deflection itself by computing the direction
-of the vector joining two successive points (previous_x,previous_y) and (x,y)
-along the  ray. By using this method, completely different from the tested code,
-we increase the confidence in the test results.
+integrating the geodesic equation - i.e. 
+<a href="https://arxiv.org/abs/2010.08735">Eq. (8)</a> in our model. Also we
+compute the deflection itself by computing the direction of the vector joining
+two successive points (previous_x,previous_y) and (x,y) along the  ray. By using
+this method, completely different from the tested code, we increase the
+confidence in the test results.
 
 <p><b>Note</b>: the $u_{max}$ parameter can be used to stop the integration when
 $u$ becomes larger than this value. In this case the function returns the
@@ -428,8 +429,8 @@ obtained via a numerical integration of the ray equation.
 <p>One of the main unit test is the following, which checks that the combination
 of the <span style="font-variant:small-caps;">Precompute</span> and
 <span style="font-variant:small-caps;">TraceRay</span> procedures of our
-<a href="../../paper.pdf">model</a> gives the same deflection as a direct
-numerical integration of the geodesic equation.
+<a href="https://arxiv.org/abs/2010.08735">model</a> gives the same deflection
+as a direct numerical integration of the geodesic equation.
 <pre class="prettyprint">
   void TestTraceRayDeflection() {
     auto test = [&](Real p_r, Angle delta) {
@@ -454,10 +455,10 @@ numerical integration of the geodesic equation.
 <p>The other main unit test checks that the combination of the <span
 style="font-variant:small-caps;">Precompute</span> and <span
 style="font-variant:small-caps;">TraceRay</span> procedures of our
-<a href="../../paper.pdf">model</a> gives the same accretion disc intersections
-as a direct numerical integration of the geodesic equation. This test is 
-instantiated for several ray and accretion disc configurations at the end of
-this file.
+<a href="https://arxiv.org/abs/2010.08735">model</a> gives the same accretion
+disc intersections as a direct numerical integration of the geodesic equation.
+This test is instantiated for several ray and accretion disc configurations at
+the end of this file.
 <pre class="prettyprint">
   void TestTraceRayIntersections() {
     Real expected_u0, expected_u1, expected_t0, expected_t1, actual_u0,

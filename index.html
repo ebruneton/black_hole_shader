@@ -126,12 +126,12 @@ href="demo/demo.html?or=913&oi=1101&cy=34922&os=352&sfy=693&sfp=1540&sfr=1474&ce
 
 <a name="introduction"/><h2>Introduction</h2>
 
-<p>We propose a <a href="paper.pdf">real-time method</a> to render high-quality
-images of a non-rotating black hole with an accretion disc and background stars.
-Our method is based on beam tracing, but uses precomputed tables to find the
-intersections of each curved light beam with the scene in constant time per
-pixel. It also uses a specific texture filtering scheme to integrate the 
-contribution of the light sources to each beam.
+<p>We propose a <a href="https://arxiv.org/abs/2010.08735">real-time method</a>
+to render high-quality images of a non-rotating black hole with an accretion
+disc and background stars. Our method is based on beam tracing, but uses
+precomputed tables to find the intersections of each curved light beam with the
+scene in constant time per pixel. It also uses a specific texture filtering
+scheme to integrate the contribution of the light sources to each beam.
 
 <a name="gallery"><h2>Gallery</h2></a>
 
@@ -247,13 +247,14 @@ demo (everything else) showing how the generic model can be used in practice.
 two subparts: preprocessing and rendering. The preprocessing, in
 <code>black_hole/preprocess/</code>, implements the <code
 style="font-variant:small-caps;">Precompute</code> procedure in <a 
-href="paper.pdf">Algorithm 1</a> of our model. The rendering part, in the
-<code>black_hole/*.glsl</code> files, provides a library of GLSL functions
-implementing the <code style="font-variant:small-caps;">TraceRay</code>
-procedure in <a href="paper.pdf">Algorithm 1</a> of our model, but also our
-custom texture filtering method for stars, our accretion disc shading model,
-the gravitational lensing effect, and the relativistic Doppler and beaming
-effects.
+href="https://arxiv.org/abs/2010.08735">Algorithm 1</a> of our model. The
+rendering part, in the <code>black_hole/*.glsl</code> files, provides a library
+of GLSL functions implementing the
+<code style="font-variant:small-caps;">TraceRay</code> procedure in
+<a href="https://arxiv.org/abs/2010.08735">Algorithm 1</a> of our model, but
+also our custom texture filtering method for stars, our accretion disc shading
+model, the gravitational lensing effect, and the relativistic Doppler and
+beaming effects.
 
 <p>The demo is also divided in a preprocessing part and a rendering part. The
 preprocessing code is used to generate
@@ -272,7 +273,8 @@ application organized into several UI components interacting via a shared model:
   <li>The <code>model/</code> component manages the state of the system, and
     notifies its listeners when this state changes. In particular, it updates 
     the camera position along its orbit, and the camera Lorentz transform, as
-    described in <a href="paper.pdf">Appendix C</a> of our model.</li>
+    described in <a href="https://arxiv.org/abs/2010.08735">Appendix C</a> of
+    our model.</li>
   <li>The <code>orbit_panel/</code> component presents a read-only, partial view
     of this state in the top-right panel of the UI.</li>
   <li>The <code>settings_panel/</code> component presents another part of this
@@ -289,8 +291,8 @@ application organized into several UI components interacting via a shared model:
 <a name="documentation"/><h2>Documentation</h2>
 
 <p>The documentation of the generic black hole shader functions consists of a <a
-href="paper.pdf">general overview</a> of our method and algorithms, and a
-detailed description of their implementation:
+href="https://arxiv.org/abs/2010.08735">general overview</a> of our method and
+algorithms, and a detailed description of their implementation:
 
 <code><ul>
   <li>black_hole/<ul>

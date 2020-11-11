@@ -140,16 +140,16 @@
 </pre><h2>black_hole/preprocess/functions.cc</h2>
 
 <p>This file implements the preprocessing functions that generate the
-precomputed textures of our <a href="../../paper.pdf">black hole model</a>. It
-also includes the <a href="../functions.glsl.html">GLSL functions</a> that
-implement this model, with suitable macros and type definitions to enable their
-compilation in C++. The goal is to be able to check, in
-<a href="functions_test.cc.html">unit tests</a>, that ray deflection and
+precomputed textures of our <a href="https://arxiv.org/abs/2010.08735">black
+hole model</a>. It also includes the <a href="../functions.glsl.html">GLSL
+functions</a> that implement this model, with suitable macros and type
+definitions to enable their compilation in C++. The goal is to be able to check,
+in <a href="functions_test.cc.html">unit tests</a>, that ray deflection and
 accretion disc intersections, obtained via the precomputed textures, are close
 to reference values computed via direct numerical integration.
 
 <p><i><b>Note</b>: the code uses the same notations as those defined in our
-<a href="../../paper.pdf">black hole model</a></i>.
+<a href="https://arxiv.org/abs/2010.08735">black hole model</a></i>.
 
 <p>We start with the inclusion of the GLSL functions, after the necessary
 definitions to enable their compilation in C++:
@@ -182,12 +182,12 @@ Real fwidth(const Real x) { return 0.0; }
 </pre>
 <p>We can now implement the <span
 style="font-variant:small-caps">Precompute</span> procedure in 
-<a href="../../paper.pdf">Algorithm 1</a> of our black hole model. Since the
-two textures it computes have different sizes and texture coordinate mappings,
-we split it in two functions. The first function precomputes the ray deflection
-texture $\mathbb{D}(e,u)$, which uses the texture coordinate mapping described
-in <a href="../../paper.pdf">Appendix A</a>. For this we first define the
-inverse of the <a href="../functions.glsl.html#deflection_mapping_u">
+<a href="https://arxiv.org/abs/2010.08735">Algorithm 1</a> of our black hole
+model. Since the two textures it computes have different sizes and texture
+coordinate mappings, we split it in two functions. The first function
+precomputes the ray deflection texture $\mathbb{D}(e,u)$, which uses the texture coordinate mapping described in
+<a href="https://arxiv.org/abs/2010.08735">Appendix A</a>. For this we first
+define the inverse of the <a href="../functions.glsl.html#deflection_mapping_u">
 <code>GetRayDeflectionTextureUFromEsquare</code></a> GLSL function:
 <pre class="prettyprint">
 Real GetEsquareFromRayDeflectionTextureU(const Real tex_u) {
@@ -245,8 +245,9 @@ void ComputeRayDeflectionTexture(RayDeflectionTexture* texture) {
 </pre>
 <p>The second function is very similar, and precomputes the ray inverse radius
 texture $\mathbb{U}(e,\varphi)$, which uses the texture coordinate mapping
-described in <a href="../../paper.pdf">Appendix A</a>. For this we first define
-the inverse of the <a href="../functions.glsl.html#inverse_radius_mapping_u">
+described in <a href="https://arxiv.org/abs/2010.08735">Appendix A</a>. For this
+we first define the inverse of the 
+<a href="../functions.glsl.html#inverse_radius_mapping_u">
 <code>GetRayInverseRadiusTextureUFromEsquare</code></a> GLSL function:
 <pre class="prettyprint">
 Real GetEsquareFromRayInverseRadiusTextureU(const Real tex_u) {
