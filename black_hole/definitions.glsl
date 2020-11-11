@@ -30,11 +30,11 @@
 /*<h2>black_hole/definitions.glsl</h2>
 
 <p>This file defines the types which are used in the main
-<a href="functions.glsl.html">functions</a> of our <a href="../paper.pdf">black
-hole model</a>. A <a href="preprocess/definitions.h.html">C++ equivalent</a> of
-this file allows the same functions to be compiled by a C++ compiler (in order
-to unit test our <a href="preprocess/functions.h.html">preprocessing
-functions</a>).
+<a href="functions.glsl.html">functions</a> of our
+<a href="https://arxiv.org/abs/2010.08735">black hole model</a>. A 
+<a href="preprocess/definitions.h.html">C++ equivalent</a> of this file allows
+the same functions to be compiled by a C++ compiler (in order to unit test our
+<a href="preprocess/functions.h.html">preprocessing functions</a>).
 
 <p>To increase the code readability we introduce different "types" for
 dimensionless quantities and for angles, as well as for the two precomputed

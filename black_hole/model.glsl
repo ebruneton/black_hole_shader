@@ -91,7 +91,7 @@ vec3 DefaultDoppler(highp sampler3D doppler_texture, vec3 rgb,
 /*
 <p>This function provides a default implementation for <code>StarColor()</code>,
 based on the custom texture filtering algorithm described in <a
-href="../paper.pdf">Section 3.3.2</a> of our model.
+href="https://arxiv.org/abs/2010.08735">Section 3.3.2</a> of our model.
 */
 
 // Returns the light emitted by the stars in the pixel footprint around 'dir',
@@ -186,8 +186,8 @@ vec3 BlackBodyColor(sampler2D black_body_texture, float temperature) {
 /*
 <p>This function provides a default implementation for <code>DiscColor()</code>,
 based on the accretion disc model described in
-<a href="../paper.pdf">Section 3.3.3</a> and 
-<a href="../paper.pdf">Appendix B</a> of our model.
+<a href="https://arxiv.org/abs/2010.08735">Section 3.3.3</a> and 
+<a href="https://arxiv.org/abs/2010.08735">Appendix B</a> of our model.
 */
 
 // Returns the light emitted by the accretion disc at 'p', at time 'p_t', 
@@ -243,7 +243,7 @@ vec4 DefaultDiscColor(vec2 p, float p_t, bool top_side, float doppler_factor,
 <p>Finally, the main <code>SceneColor</code> function:
 <ul>
 <li>initializes the light beam parameters as described in 
-<a href="../paper.pdf">Section 3.2</a> of our model,</li>
+<a href="https://arxiv.org/abs/2010.08735">Section 3.2</a> of our model,</li>
 <li>calls the <code>RayTrace()</code> function to get the light ray deflection
 and the accretion disc intersections,</li>
 <li>computes the light emitted by the stars and the accretion disc with
@@ -251,7 +251,7 @@ and the accretion disc intersections,</li>
 <code>DiscColor()</code>,
 <li>computes the corresponding received light by computing the gravitational
 lensing effect and the Doppler and beaming effects as described in 
-<a href="../paper.pdf">Section 3.4</a> of our model,</li>
+<a href="https://arxiv.org/abs/2010.08735">Section 3.4</a> of our model,</li>
 <li>returns the composited star and disc colors.</li>
 </ul>
 */
